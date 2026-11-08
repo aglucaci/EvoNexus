@@ -1,0 +1,51 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**', 'README.md', 'scripts/evonexus/core/schema.py']
+  pull_request:
+    paths: ['docs/**', 'README.md', 'scripts/evonexus/core/schema.py']
+
+jobs:
+  check:
+    name: Documentation consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install pyyaml pandas numpy
+
+      - name: Regenerate the data dictionary and fail on drift
+        env:
+          PYTHONPATH: scripts
+        run: |
+          python -m evonexus.cli schema --markdown docs/DATA_DICTIONARY.md
+          git diff --exit-code docs/DATA_DICTIONARY.md \
+            || { echo 'docs/DATA_DICTIONARY.md is stale; regenerate it with:'; \
+                 echo '  PYTHONPATH=scripts python -m evonexus.cli schema --markdown docs/DATA_DICTIONARY.md'; \
+                 exit 1; }
+
+      - name: Check that every documented config file exists
+        run: |
+          for f in datasets metadata_mapping viral_filters priors model_comparisons figures qc_gates evolution; do
+            test -f "config/$f.yaml" || { echo "missing config/$f.yaml"; exit 1; }
+          done
+
+      - name: Check internal documentation links
+        run: |
+          python - <<'PY'
+          import re, pathlib, sys
+          bad = []
+          for md in list(pathlib.Path('docs').glob('*.md')) + [pathlib.Path('README.md')]:
+              for target in re.findall(r'\]\((?!https?:)([^)#]+)', md.read_text()):
+                  if not (md.parent / target).resolve().exists():
+                      bad.append(f'{md}: {target}')
+          if bad:
+              print('broken relative links:', *bad, sep='\n  ')
+              sys.exit(1)
+          print('all relative links resolve')
+          PY

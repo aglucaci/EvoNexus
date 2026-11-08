@@ -1,0 +1,80 @@
+# EvoNexus — eligibility and tool settings for the evolutionary subworkflow.
+#
+# Selection analyses have their own gates. A sparse alignment, an uncertain set
+# of homologs or too little divergence produces a documented exclusion, never a
+# number that looks like a result.
+
+schema_version: 1
+
+sequence_selection:
+  # Which lineages are carried into phylogenetics.
+  min_sequences_per_lineage: 8
+  min_sequence_length: 300          # nucleotides, ungapped
+  max_sequences_per_lineage: 500
+  require_coding: true
+  focal_families:
+    - Coronaviridae
+    - Paramyxoviridae
+    - Astroviridae
+
+alignment:
+  tool: mafft
+  args: ["--auto", "--anysymbol"]
+  codon_aware: true                 # translate-align-backtranslate when coding
+  min_aligned_columns: 300
+  max_gap_fraction_per_sequence: 0.5
+  max_gap_fraction_per_column: 0.5
+
+recombination:
+  # Selection tests assume a single tree. If recombination is detected and not
+  # handled, the lineage is excluded from selection analysis.
+  enabled: true
+  tool: hyphy_gard                  # falls back to a documented exclusion
+  max_breakpoints_tolerated: 0
+  on_detection: exclude_from_selection
+
+phylogeny:
+  tool: iqtree2
+  model: MFP                        # ModelFinder Plus
+  bootstrap: 1000                   # ultrafast bootstrap
+  args: ["-nt", "AUTO"]
+
+selection:
+  # Each analysis states what it tests, so a legend cannot overclaim.
+  analyses:
+    - name: FEL
+      question: "Which individual sites show pervasive positive or negative selection?"
+      enabled: true
+    - name: MEME
+      question: "Which sites show episodic diversifying selection on a subset of branches?"
+      enabled: true
+    - name: BUSTED
+      question: "Is there evidence of episodic diversifying selection anywhere in the gene?"
+      enabled: true
+    - name: aBSREL
+      question: "Which individual branches show episodic diversifying selection?"
+      enabled: false
+  eligibility:
+    min_sequences: 10
+    min_codons: 100
+    min_mean_pairwise_divergence: 0.01
+    max_mean_pairwise_divergence: 0.60   # saturation
+    require_no_recombination: true
+  significance:
+    p_value: 0.05
+    correction: holm
+
+host_phylogeny:
+  # Optional bat phylogeny used by model M5. Provide a Newick file.
+  newick_path: null
+  covariance: brownian              # shared root-to-MRCA path length
+  scale_to_correlation: true
+
+integration:
+  # How evolutionary summaries are related to connectivity.
+  relate_to_connectivity: true
+  metrics: [host_breadth, mean_pairwise_divergence, n_sites_under_selection]
+  note: >-
+    Associations between evolutionary summaries and connectivity are
+    descriptive. They do not establish that viral evolution causes host
+    sharing or the reverse.

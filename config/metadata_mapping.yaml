@@ -1,0 +1,99 @@
+# EvoNexus — column mapping from published source tables to the canonical schema.
+#
+# IMPORTANT: this file is a *proposal* that must be reviewed by a human against
+# the real headers emitted by `evonexus inventory`. Until a mapping entry is
+# marked `approved: true`, the harmonization step refuses to use it and the
+# pipeline stops with an explanatory report. This prevents a silently wrong
+# join between SRA runs, libraries, bats and viral lineages.
+
+schema_version: 1
+approved: false
+approved_by: null
+approved_on: null
+source_inventory_checksum: null   # set to the inventory.json sha256 you reviewed
+
+# Each canonical entity lists candidate source column names, in priority order.
+# `required: true` fields that cannot be resolved cause a hard failure.
+entities:
+
+  sites:
+    source_table: null            # e.g. "metadata_sampling_sites.csv"
+    fields:
+      site_id:        {candidates: [site_id, Site_ID, location_id, Location, sampling_site], required: true}
+      region:         {candidates: [region, Region, province, Province], required: false}
+      country:        {candidates: [country, Country], required: false}
+      habitat_raw:    {candidates: [habitat, Habitat, habitat_type, environment], required: true}
+      latitude:       {candidates: [latitude, Latitude, lat], required: false}
+      longitude:      {candidates: [longitude, Longitude, lon, long], required: false}
+      geo_resolution: {candidates: [geo_resolution, coordinate_precision], required: false}
+
+  hosts:
+    source_table: null
+    fields:
+      host_id:        {candidates: [host_id, bat_id, specimen_id, animal_id, pool_id], required: true}
+      site_id:        {candidates: [site_id, Site_ID, location_id], required: true}
+      host_species:   {candidates: [host_species, species, Species, bat_species], required: true}
+      host_genus:     {candidates: [genus, Genus, host_genus], required: false}
+      host_family:    {candidates: [family, Family, host_family], required: false}
+      pool_size:      {candidates: [pool_size, n_individuals, num_bats, pooled_n], required: false}
+      is_pool:        {candidates: [is_pool, pooled, sample_type], required: false}
+      collection_date: {candidates: [collection_date, date, sampling_date], required: false}
+
+  libraries:
+    source_table: null
+    fields:
+      library_id:     {candidates: [library_id, Library, library_name, sample_id, Run], required: true}
+      host_id:        {candidates: [host_id, pool_id, specimen_id, sample_id], required: true}
+      site_id:        {candidates: [site_id, location_id], required: false}
+      tissue:         {candidates: [tissue, Tissue, sample_type, organ], required: true}
+      read_depth:     {candidates: [read_depth, total_reads, n_reads, clean_reads, spots], required: true}
+      sequencing_batch: {candidates: [batch, run_batch, sequencing_batch, platform_run], required: false}
+      sra_run:        {candidates: [Run, run_accession, SRR, sra_run], required: false}
+      bioproject:     {candidates: [BioProject, bioproject, study_accession], required: false}
+      collection_date: {candidates: [collection_date, date, sampling_date], required: false}
+
+  viruses:
+    source_table: null
+    fields:
+      virus_id:       {candidates: [virus_id, lineage_id, vOTU, cluster_id, contig_cluster], required: true}
+      virus_family:   {candidates: [family, Family, viral_family, taxon_family], required: true}
+      virus_name:     {candidates: [virus_name, name, species], required: false}
+      classification_evidence: {candidates: [classification, evidence, assignment_method], required: false}
+      representative_accession: {candidates: [accession, representative, ref_accession, GenBank], required: false}
+      mammal_associated: {candidates: [mammal_associated, host_group, vertebrate_associated], required: false}
+
+  detections:
+    source_table: null
+    fields:
+      library_id:     {candidates: [library_id, Library, sample_id, Run], required: true}
+      virus_id:       {candidates: [virus_id, lineage_id, vOTU, cluster_id], required: true}
+      abundance:      {candidates: [rpkm, RPKM, abundance, tpm, count, reads_mapped], required: false}
+      coverage_breadth: {candidates: [coverage, breadth, genome_coverage, cov_breadth], required: false}
+      mapped_reads:   {candidates: [reads_mapped, n_mapped, mapped], required: false}
+
+  ecology:
+    source_table: null
+    fields:
+      site_id:        {candidates: [site_id, location_id], required: true}
+      forest_cover:   {candidates: [forest_cover, forest_pct, tree_cover], required: false}
+      humidity:       {candidates: [humidity, rh, relative_humidity], required: false}
+      temperature:    {candidates: [temperature, mean_temp, tmean], required: false}
+      precipitation:  {candidates: [precipitation, precip, rainfall], required: false}
+      diet:           {candidates: [diet, trophic_guild, feeding_guild], required: false}
+
+# Controlled vocabularies. Any source value not listed here becomes "unknown"
+# and is reported — never silently coerced into a modelled category.
+vocabularies:
+  habitat:
+    settlement: [settlement, urban, village, town, human settlement, residential, anthropogenic]
+    wild:       [wild, forest, cave, natural, karst, woodland, nature reserve]
+    # Anything else -> unknown (excluded from the primary habitat contrast).
+  tissue:
+    gut:         [gut, intestine, intestinal, faeces, feces, anal swab, rectal swab]
+    respiratory: [lung, oral swab, throat swab, oropharyngeal, nasal]
+    other_organ: [liver, spleen, kidney, heart, brain, pooled organs]
+    urine:       [urine, urinary]
+  boolean_true:  [true, "TRUE", "True", yes, "Y", "1", 1, pooled, pool]
+  boolean_false: [false, "FALSE", "False", no, "N", "0", 0, individual, single]
+
+missing_tokens: ["", "NA", "N/A", "na", "null", "NULL", "none", "None", "-", "unknown", "Unknown", "?"]

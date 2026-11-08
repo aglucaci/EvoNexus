@@ -1,0 +1,74 @@
+# EvoNexus — priors for the hierarchical detection model.
+#
+# All continuous predictors are standardized (mean 0, sd 1) on the modelled
+# subset before fitting, so these priors are on the standardized scale. The
+# intercept prior is centred on the logit of the observed marginal detection
+# rate ONLY in the `empirical` variant; the default is weakly informative and
+# data-independent.
+
+schema_version: 1
+
+default: regularizing
+
+variants:
+
+  regularizing:
+    description: "Default weakly-informative regularizing priors."
+    intercept:            {dist: normal, mu: -3.0, sigma: 1.5}
+    habitat_beta:         {dist: normal, mu: 0.0, sigma: 1.0}
+    family_sd:            {dist: halfnormal, sigma: 1.0}
+    lineage_sd:           {dist: halfnormal, sigma: 1.0}
+    host_sd:              {dist: halfnormal, sigma: 1.0}
+    tissue_sd:            {dist: halfnormal, sigma: 1.0}
+    site_sd:              {dist: halfnormal, sigma: 1.0}
+    batch_sd:             {dist: halfnormal, sigma: 0.75}
+    interaction_sd:       {dist: halfnormal, sigma: 0.5}   # host x family
+    depth_gamma:          {dist: normal, mu: 0.0, sigma: 1.0}
+    poolsize_gamma:       {dist: normal, mu: 0.0, sigma: 1.0}
+    time_gamma:           {dist: normal, mu: 0.0, sigma: 0.5}
+    ecology_theta:        {dist: normal, mu: 0.0, sigma: 0.5}
+    host_phylo_sd:        {dist: halfnormal, sigma: 1.0}
+    host_phylo_lambda:    {dist: beta, alpha: 2.0, beta: 2.0}
+
+  tight:
+    description: "Sensitivity: stronger shrinkage on every varying effect."
+    inherits: regularizing
+    overrides:
+      habitat_beta:   {dist: normal, mu: 0.0, sigma: 0.5}
+      family_sd:      {dist: halfnormal, sigma: 0.5}
+      lineage_sd:     {dist: halfnormal, sigma: 0.5}
+      host_sd:        {dist: halfnormal, sigma: 0.5}
+      interaction_sd: {dist: halfnormal, sigma: 0.25}
+
+  wide:
+    description: "Sensitivity: weaker shrinkage; checks prior dominance."
+    inherits: regularizing
+    overrides:
+      habitat_beta:   {dist: normal, mu: 0.0, sigma: 2.5}
+      family_sd:      {dist: halfnormal, sigma: 2.0}
+      lineage_sd:     {dist: halfnormal, sigma: 2.0}
+      host_sd:        {dist: halfnormal, sigma: 2.0}
+      interaction_sd: {dist: halfnormal, sigma: 1.0}
+
+# Prior predictive acceptance band. If the prior predictive marginal detection
+# rate falls outside this interval the pipeline reports a warning, because the
+# priors then imply implausible virome prevalence before seeing data.
+prior_predictive:
+  draws: 1000
+  plausible_detection_rate: [0.0005, 0.35]
+
+sampler:
+  draws: 1000
+  tune: 1000
+  chains: 4
+  target_accept: 0.9
+  seed: 20250101
+  max_treedepth: 12
+
+# Convergence gates. Results are not released unless all are satisfied.
+convergence_gates:
+  max_rhat: 1.01
+  min_ess_bulk: 400
+  min_ess_tail: 400
+  max_divergences_fraction: 0.005
+  max_treedepth_hits_fraction: 0.05

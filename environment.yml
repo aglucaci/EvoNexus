@@ -1,0 +1,50 @@
+# EvoNexus runtime environment.
+#   conda env create -f environment.yml && conda activate evonexus
+#
+# PyMC/ArviZ are the intended sampling engine. Without them the pipeline still
+# runs on its built-in Polya-Gamma Gibbs sampler, which is recorded in every
+# artifact — but published results should use PyMC/NUTS.
+name: evonexus
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - pip
+
+  # core
+  - numpy>=1.26
+  - pandas>=2.1
+  - scipy>=1.11
+  - pyarrow>=14
+  - pyyaml>=6.0
+  - matplotlib>=3.8
+  - networkx>=3.2
+
+  # Bayesian inference
+  - pymc>=5.10
+  - arviz>=0.17
+  - pytensor>=2.18
+  - numpyro>=0.13          # optional alternative NUTS backend
+  - xarray>=2023.12
+  - netcdf4>=1.6
+
+  # sequence handling and phylogenetics
+  - biopython>=1.83
+  - mafft>=7.520
+  - iqtree>=2.2.2
+  - hyphy>=2.5.60
+
+  # optional raw-read workflow
+  - sra-tools>=3.0
+  - fastp>=0.23
+  - bowtie2>=2.5
+  - samtools>=1.19
+  - seqkit>=2.6
+  - pigz
+
+  # workflow and tooling
+  - nextflow>=23.10
+  - pytest>=7.4
+  - pytest-cov>=4.1
+  - ruff>=0.3

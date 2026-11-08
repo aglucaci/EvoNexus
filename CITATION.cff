@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use EvoNexus, please cite it and cite the underlying public datasets separately."
+title: "EvoNexus: evolutionary and ecological networks of viral host sharing"
+abstract: >-
+  A provenance-aware Nextflow DSL2 pipeline for Bayesian inference of
+  habitat-associated viral RNA detection and cross-host connectivity from
+  public bat metatranscriptomic datasets, with automated manuscript outputs.
+type: software
+version: 0.1.0
+date-released: "2026-11-08"
+license: MIT
+repository-code: "https://github.com/aglucaci/evonexus"
+authors:
+  - family-names: Lucaci
+    given-names: Alexander
+    affiliation: "Weill Cornell Medicine"
+    email: agl4001@med.cornell.edu
+keywords:
+  - bioinformatics
+  - metatranscriptomics
+  - Bayesian hierarchical models
+  - viral ecology
+  - molecular evolution
+  - Nextflow
+  - reproducibility
+references:
+  - type: article
+    title: >-
+      A compendium of 8,176 bat RNA viral metagenomes reveals ecological
+      drivers and circulation dynamics
+    authors:
+      - family-names: Yan
+        given-names: "et al."
+    year: 2025
+    notes: "Primary source dataset (BtCN-Virome). Verify the full author list and DOI against the publication before submission."

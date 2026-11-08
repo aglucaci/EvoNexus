@@ -1,0 +1,94 @@
+# EvoNexus — registry of public data sources.
+#
+# Nothing in this file is downloaded implicitly. The acquisition workflow reads
+# this registry, resolves each source to a concrete file list, records a
+# manifest with checksums, and only then downloads. Sources marked
+# `enabled: false` are described for documentation purposes but skipped.
+#
+# `tier` controls which acquisition mode pulls the source:
+#   processed  -> small processed tables, metadata, alignments, trees
+#   reads      -> bulk FASTQ / SRA runs (only in mode `raw_reads`)
+#   reference  -> GenBank / nucleotide reference sequences
+
+schema_version: 1
+
+sources:
+
+  btcn_virome_figshare:
+    tier: processed
+    enabled: true
+    kind: figshare
+    title: "BtCN-Virome processed compendium (Yan et al. 2025)"
+    doi: "10.6084/m9.figshare.24515056"
+    article_id: 24515056
+    api_endpoint: "https://api.figshare.com/v2/articles/24515056"
+    citation: >-
+      Yan et al. (2025). A compendium of 8,176 bat RNA viral metagenomes
+      reveals ecological drivers and circulation dynamics.
+    license: "See Figshare deposit; verify before redistribution."
+    expect:
+      # The pipeline does NOT assume these exist. It inventories whatever the
+      # deposit actually contains and reports which expectations were met.
+      metadata_tables: true
+      library_virus_matrix: unknown
+      alignments: unknown
+      trees: unknown
+    notes: >-
+      The published study reports 4,143 bats, 40 bat species, 52 locations and
+      363 sequencing libraries. The 363 libraries define the observation unit
+      for library-level modelling.
+
+  sra_prjna862267:
+    tier: reads
+    enabled: true
+    kind: sra_bioproject
+    accession: PRJNA862267
+    title: "BtCN-Virome metatranscriptomes (part 1)"
+    runinfo_only_in_processed_mode: true
+
+  sra_prjna997461:
+    tier: reads
+    enabled: true
+    kind: sra_bioproject
+    accession: PRJNA997461
+    title: "BtCN-Virome metatranscriptomes (part 2)"
+    runinfo_only_in_processed_mode: true
+
+  sra_prjna929070:
+    tier: reads
+    enabled: true
+    kind: sra_bioproject
+    accession: PRJNA929070
+    title: "Independent individual-bat dataset (secondary evaluation)"
+    runinfo_only_in_processed_mode: true
+    role: secondary_evaluation
+    caveat: >-
+      Used to ask whether host-sharing summaries remain interpretable without
+      pooled sequencing. It is NOT an independent replication of the
+      settlement-versus-wild habitat contrast.
+
+  genbank_viral_homologs:
+    tier: reference
+    enabled: true
+    kind: ncbi_nuccore
+    query_file: config/genbank_queries.txt
+    title: "GenBank homologs for viral evolutionary analyses"
+    batch_size: 200
+
+# Environmental covariate products are opt-in. They are only joined when the
+# source metadata carries geographic/temporal resolution that supports them.
+environmental:
+  era5_land:
+    enabled: false
+    kind: manual
+    note: "Place pre-extracted per-site covariates in data/external/era5_land/."
+  land_cover:
+    enabled: false
+    kind: manual
+    note: "Place pre-extracted per-site covariates in data/external/land_cover/."
+
+http:
+  user_agent: "EvoNexus/0.1 (reproducible research pipeline)"
+  max_retries: 5
+  backoff_seconds: 2.0
+  timeout_seconds: 120

@@ -1,0 +1,44 @@
+# EvoNexus — parameter overrides.
+#   nextflow run . -profile processed -params-file params.yaml
+#
+# Only set what you mean to change; everything else comes from the profile.
+
+# --- data ----------------------------------------------------------------
+acquisition_mode: processed_only     # processed_only | raw_reads
+offline: false
+synthetic: false
+
+# --- harmonization -------------------------------------------------------
+# Leave true for real data. Harmonization stops until you have read the
+# inventory and approved config/metadata_mapping.yaml.
+require_mapping_approval: true
+allow_role_guess: false
+
+# --- quality gates -------------------------------------------------------
+# false: a critical gate failure skips the primary model and runs the
+# descriptive branch. true: abort the run instead.
+fail_on_critical_gate: false
+
+# --- modelling -----------------------------------------------------------
+models: [M0, M1, M2, M3, M4]
+primary_model: M3
+prior_variant: regularizing          # regularizing | tight | wide
+engine: auto                         # auto | pymc_nuts | polya_gamma_gibbs
+draws: 1000
+tune: 1000
+chains: 4
+seed: 20250101
+resolutions: [lineage, family, strict]
+run_sensitivity: true
+
+# --- connectivity and validation -----------------------------------------
+permutations: 500
+cv_group_columns: [site_id, region]
+cv_folds: 5
+
+# --- optional inputs ------------------------------------------------------
+# sequences: data/external/viral_homologs.fasta
+# host_newick: data/external/bat_phylogeny.nwk
+
+# --- output ---------------------------------------------------------------
+# outdir: results/processed

@@ -1,0 +1,102 @@
+# EvoNexus — figure and table specifications.
+#
+# Each figure declares the analysis artifacts it requires. If a required input
+# is missing, the figure is emitted as an explicit "not generated" placeholder
+# with the reason, and the legend records the same. Values are never invented.
+
+schema_version: 1
+
+style:
+  width_mm: 180
+  height_mm: 200
+  dpi: 400
+  font_family: ["Helvetica", "Arial", "DejaVu Sans"]
+  font_size_pt: 7
+  formats: [pdf, svg, png]
+  palette:
+    settlement: "#B4503C"
+    wild:       "#2F6B5E"
+    neutral:    "#4A4A4A"
+    light:      "#C9C9C9"
+    accent:     "#3B6EA5"
+  synthetic_watermark: "SYNTHETIC DATA — NOT A SCIENTIFIC RESULT"
+
+figures:
+
+  Figure1:
+    title: "Sampling structure of the analysed libraries"
+    question: "What was actually sampled, and where is the habitat contrast estimable?"
+    panels:
+      - {id: a, name: "Geographic distribution of sampling sites by habitat"}
+      - {id: b, name: "Host species x habitat overlap matrix"}
+      - {id: c, name: "Effective sequencing depth by habitat and tissue"}
+      - {id: d, name: "Exclusion waterfall from source records to modelled cells"}
+    requires: [libraries, hosts, sites, detections, qc_report]
+    source_tables: [Figure1a_sites, Figure1b_overlap, Figure1c_depth, Figure1d_exclusions]
+
+  Figure2:
+    title: "Bayesian inference of habitat-associated viral detection"
+    question: "Does lineage-level detection probability differ between settlement and wild habitats under comparable sampling?"
+    panels:
+      - {id: a, name: "Raw per-library detection rates by habitat"}
+      - {id: b, name: "Posterior standardized detection probability by habitat"}
+      - {id: c, name: "Posterior habitat contrast, overall and by viral family"}
+      - {id: d, name: "Sensitivity of the contrast across priors, filters and restrictions"}
+    requires: [posterior_M3, habitat_contrast, sensitivity_table]
+    source_tables: [Figure2a_raw, Figure2b_standardized, Figure2c_contrast, Figure2d_sensitivity]
+
+  Figure3:
+    title: "Posterior cross-host connectivity"
+    question: "Which bat host species are expected to co-detect the same viral lineages under a common sampling design?"
+    panels:
+      - {id: a, name: "Host-virus bipartite structure of modelled detections"}
+      - {id: b, name: "Posterior expected co-detection matrix C_ij"}
+      - {id: c, name: "Observed connectivity versus sampling-preserving null"}
+      - {id: d, name: "Connectivity versus host phylogenetic distance"}
+    requires: [posterior_M3, connectivity, connectivity_null]
+    source_tables: [Figure3a_bipartite, Figure3b_matrix, Figure3c_null, Figure3d_phylo]
+
+  Figure4:
+    title: "Viral evolutionary structure across hosts"
+    question: "Do focal lineages show host-associated sequence structure or detectable selection?"
+    panels:
+      - {id: a, name: "Focal maximum-likelihood phylogeny with host labels"}
+      - {id: b, name: "Within- versus between-host genetic distances"}
+      - {id: c, name: "Sites or branches under selection, by analysis"}
+      - {id: d, name: "Host breadth versus lineage divergence"}
+    requires: [trees, selection_results]
+    source_tables: [Figure4a_tree, Figure4b_distance, Figure4c_selection, Figure4d_breadth]
+
+  Figure5:
+    title: "Model validation and predictive performance"
+    question: "Is the model calibrated, and does it generalize to unseen locations?"
+    panels:
+      - {id: a, name: "Model comparison across M0-M5 (ELPD)"}
+      - {id: b, name: "Calibration of predicted versus observed detection"}
+      - {id: c, name: "Posterior predictive checks of key summaries"}
+      - {id: d, name: "Held-out site/region predictive scores"}
+    requires: [model_comparison, cross_validation, posterior_predictive]
+    source_tables: [Figure5a_comparison, Figure5b_calibration, Figure5c_ppc, Figure5d_heldout]
+
+tables:
+  Table1:  {title: "Library-level sampling and ecological characteristics", requires: [libraries, hosts, sites, ecology]}
+  Table2:  {title: "Posterior habitat contrasts", requires: [habitat_contrast]}
+  Table3:  {title: "Viral lineage and host-sharing connectivity summaries", requires: [connectivity]}
+  Table4:  {title: "Model predictive comparison and calibration", requires: [model_comparison, cross_validation]}
+  S1:      {title: "Data availability, provenance and exclusions", requires: [manifest, qc_report]}
+  S2:      {title: "Priors and parameter recovery", requires: [prior_check, parameter_recovery]}
+  S3:      {title: "MCMC and posterior predictive diagnostics", requires: [diagnostics]}
+  S4:      {title: "Molecular evolution and selection", requires: [selection_results]}
+  S5:      {title: "Sensitivity analyses and null models", requires: [sensitivity_table, connectivity_null]}
+
+legend_template:
+  sections:
+    - question
+    - data_and_n
+    - panels
+    - statistics
+    - caveats
+  caveat_boilerplate:
+    - "Detections are library-level viral RNA detections, not confirmed infections of individual animals."
+    - "The habitat contrast is an observational association standardized to a common sampling distribution; it is not a causal effect of urbanization."
+    - "Connectivity is expected co-detection under the fitted model, not inferred host-to-host transmission."

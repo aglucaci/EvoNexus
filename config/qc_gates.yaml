@@ -1,0 +1,77 @@
+# EvoNexus — mandatory data gates.
+#
+# A *critical* gate failure stops the primary Bayesian habitat analysis and
+# emits an explanatory QC report. Descriptive analyses still run, and are
+# labelled as descriptive-only in every downstream output.
+
+schema_version: 1
+
+gates:
+
+  G1:
+    name: "Identifiers"
+    condition: "Every detection maps to a valid library and a catalogued lineage."
+    critical: true
+    thresholds:
+      max_orphan_detection_fraction: 0.0
+      max_library_without_host_fraction: 0.02
+      max_host_without_site_fraction: 0.05
+
+  G2:
+    name: "Biological structure"
+    condition: "Host species and pool relationships are documented."
+    critical: false
+    thresholds:
+      max_unknown_pool_status_fraction: 0.20
+      max_unknown_host_species_fraction: 0.10
+
+  G3:
+    name: "Detection validity"
+    condition: "Positives and assay-tested negatives are distinguishable."
+    critical: true
+    thresholds:
+      min_valid_negative_fraction: 0.50   # of all library x lineage cells
+      min_positive_cells: 20
+      max_unassessable_fraction: 0.40
+
+  G4:
+    name: "Exposure"
+    condition: "Habitat is known at a supported observational level."
+    critical: true
+    thresholds:
+      min_known_habitat_library_fraction: 0.70
+      min_libraries_per_habitat: 15
+      min_sites_per_habitat: 3
+
+  G5:
+    name: "Overlap"
+    condition: "Host comparisons across habitats are estimable."
+    critical: true
+    thresholds:
+      min_overlapping_host_species: 2
+      min_libraries_per_overlapping_species_per_habitat: 2
+      min_overlap_library_fraction: 0.30
+
+  G6:
+    name: "Sample dependence"
+    condition: "Repeated libraries and shared pools are representable in the model."
+    critical: false
+    thresholds:
+      max_libraries_per_host_without_grouping: 1
+      require_batch_variable: true
+
+  G7:
+    name: "Viral classification"
+    condition: "Eligible mammal-associated RNA viral lineages are curated."
+    critical: true
+    thresholds:
+      min_eligible_lineages: 5
+      max_unclassified_fraction: 0.50
+
+on_critical_failure:
+  stop_primary_model: true
+  run_descriptive: true
+  message: >-
+    The primary settlement-versus-wild Bayesian analysis was not run because a
+    critical data gate failed. The descriptive outputs below describe the
+    available data only; no habitat effect is estimated or implied.

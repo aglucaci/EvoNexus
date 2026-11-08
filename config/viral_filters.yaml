@@ -1,0 +1,99 @@
+# EvoNexus — eligibility rules for viral lineages and for detection calls.
+
+schema_version: 1
+
+# ---------------------------------------------------------------------------
+# Which viral lineages enter the primary model
+# ---------------------------------------------------------------------------
+lineage_eligibility:
+  # Only RNA viral families plausibly associated with mammals are modelled.
+  # A lineage whose family is absent from this list is retained in the
+  # descriptive outputs but excluded from the primary habitat model.
+  mammal_associated_families:
+    - Coronaviridae
+    - Paramyxoviridae
+    - Astroviridae
+    - Picornaviridae
+    - Caliciviridae
+    - Reoviridae
+    - Rhabdoviridae
+    - Orthomyxoviridae
+    - Peribunyaviridae
+    - Nairoviridae
+    - Phenuiviridae
+    - Hepeviridae
+    - Flaviviridae
+    - Togaviridae
+    - Arteriviridae
+    - Circoviridae          # DNA; retained only if the source assays it
+    - Picobirnaviridae
+    - Adenoviridae
+    - Parvoviridae
+    - Retroviridae
+  require_mammal_associated_flag: false   # true = trust the source column only
+  exclude_families:
+    - Virgaviridae          # plant
+    - Partitiviridae        # fungal/plant
+    - Narnaviridae          # fungal
+    - Totiviridae           # fungal/protist
+    - Dicistroviridae       # insect (diet-derived)
+    - Iflaviridae           # insect (diet-derived)
+    - Nodaviridae           # insect/fish
+    - Tombusviridae         # plant
+    - Solemoviridae         # plant
+  exclude_unclassified: true
+  # A lineage must be detected in at least this many libraries to be modelled
+  # as a lineage-specific effect; rarer lineages are pooled into their family
+  # unless `pool_rare_into_family` is false, in which case they are dropped.
+  min_libraries_detected: 2
+  pool_rare_into_family: true
+
+# ---------------------------------------------------------------------------
+# What counts as a detection, a true zero, or an unassessable cell
+# ---------------------------------------------------------------------------
+detection_call:
+  # Positive requires ALL of the satisfied thresholds that are non-null.
+  positive:
+    min_mapped_reads: 10
+    min_coverage_breadth: 0.10      # fraction of reference covered >=1x
+    min_abundance: null             # set if the source reports RPKM/TPM
+    min_mapq: 20                    # raw-read mode only
+  # A library-by-lineage cell is a VALID NEGATIVE only when the library was
+  # actually screened against that lineage under a common reference universe.
+  # Otherwise it stays missing. This is the single most consequential rule in
+  # the pipeline: silently filling absences with zeros inflates contrasts.
+  negative_requires:
+    screened_against_common_panel: true
+    min_effective_depth: 1000000    # reads; below this the cell is unassessable
+  unassessable_policy: missing      # missing | drop_library | drop_lineage
+
+# ---------------------------------------------------------------------------
+# Contamination and index-hopping controls
+# ---------------------------------------------------------------------------
+contamination:
+  flag_single_batch_lineages: true  # lineage seen only within one batch
+  index_hopping_ratio: 0.001        # drop calls below this fraction of the
+                                    # max abundance of the same lineage in the
+                                    # same sequencing batch
+  drop_negative_control_lineages: true
+  negative_control_pattern: "(?i)(?:blank|ntc|negative|control)"
+
+# ---------------------------------------------------------------------------
+# Effective sequencing depth: must be defined identically for every library
+# ---------------------------------------------------------------------------
+effective_depth:
+  definition: non_host_non_rrna_reads
+  fallback_definition: total_clean_reads
+  log_transform: true
+  note: >-
+    If the published tables only report total reads, the fallback is used and
+    the choice is recorded in the QC report and in the model metadata, because
+    it changes the interpretation of the depth covariate.
+
+# ---------------------------------------------------------------------------
+# Alternative lineage resolutions for the sensitivity analysis
+# ---------------------------------------------------------------------------
+reference_resolutions:
+  - {name: lineage, description: "Published lineage / vOTU identifiers"}
+  - {name: family,  description: "Collapse lineages to viral family"}
+  - {name: strict,  description: "Lineage, requiring coverage breadth >= 0.5"}

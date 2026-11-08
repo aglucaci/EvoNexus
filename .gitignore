@@ -1,0 +1,53 @@
+# Nextflow
+work/
+.nextflow/
+.nextflow.log*
+.nextflow.pid
+timeline*.html
+report*.html
+trace*.txt
+dag*.html
+
+# Data and heavy intermediates are never committed.
+data/raw/**
+data/external/**
+data/interim/**
+data/processed/**
+!data/**/.gitignore
+
+# Generated results, except the lightweight publication outputs you choose
+# to commit for a release.
+results/**
+!results/.gitignore
+
+# Posterior draws and traces
+*.npz
+*.nc
+*.nc4
+
+# Sequence and alignment files
+*.fastq
+*.fastq.gz
+*.bam
+*.bai
+*.sam
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Containers
+.singularity/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

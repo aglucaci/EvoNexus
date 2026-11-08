@@ -1,0 +1,84 @@
+# EvoNexus — nested model ladder M0..M5.
+#
+# Terms are switches consumed by evonexus.bayesian.design. Every model shares
+# the same likelihood (Bernoulli over eligible library x lineage cells) and the
+# same eligible-observation set, so LOO/WAIC comparisons are well defined.
+
+schema_version: 1
+
+primary_model: M3
+ecology_model: M4
+
+terms_glossary:
+  intercept:      "alpha"
+  virus_family:   "a_{f(v)} — varying intercept by viral family"
+  virus_lineage:  "a_v — varying intercept by viral lineage, nested in family"
+  depth:          "gamma_D * log D_l — effective sequencing depth"
+  pool_size:      "gamma_N * log N_l — number of animals in the library's pool"
+  time:           "gamma_T * T_l — standardized collection time"
+  batch:          "varying intercept by sequencing batch"
+  host:           "b_{h(l)} — varying intercept by bat host species"
+  tissue:         "c_{t(l)} — varying intercept by tissue"
+  host_family_ix: "kappa_{h,f} — shrinkage-regularized host x viral family"
+  site:           "g_{r(l)} — varying intercept by sampling site"
+  habitat:        "beta_U * U_l — settlement (1) vs wild (0)"
+  ecology:        "theta^T E_l — standardized site/host ecological covariates"
+  host_phylo:     "host-species covariance from a bat phylogeny"
+
+models:
+
+  M0:
+    label: "Detection baseline"
+    purpose: "Viral identity plus measured technical covariates only."
+    terms: [intercept, virus_family, virus_lineage, depth, pool_size, time, batch]
+
+  M1:
+    label: "Host and sample composition"
+    purpose: "Adds which bat species and which tissue was sequenced."
+    terms: [intercept, virus_family, virus_lineage, depth, pool_size, time, batch,
+            host, tissue]
+
+  M2:
+    label: "Geographic confounding"
+    purpose: "Adds sampling site, so habitat is not confounded with place."
+    terms: [intercept, virus_family, virus_lineage, depth, pool_size, time, batch,
+            host, tissue, site]
+
+  M3:
+    label: "Primary habitat comparison"
+    purpose: "Adds the settlement-vs-wild term and the host x family interaction."
+    terms: [intercept, virus_family, virus_lineage, depth, pool_size, time, batch,
+            host, tissue, site, host_family_ix, habitat]
+
+  M4:
+    label: "Ecological explanation"
+    purpose: "Adds supported ecological covariates measured at the site level."
+    terms: [intercept, virus_family, virus_lineage, depth, pool_size, time, batch,
+            host, tissue, site, host_family_ix, habitat, ecology]
+    requires: {ecology_covariates_available: true}
+
+  M5:
+    label: "Evolutionary host relatedness"
+    purpose: "Replaces exchangeable host effects with phylogenetic covariance."
+    terms: [intercept, virus_family, virus_lineage, depth, pool_size, time, batch,
+            host, tissue, site, host_family_ix, habitat, ecology, host_phylo]
+    requires: {host_phylogeny_available: true, ecology_covariates_available: true}
+
+comparison:
+  method: loo                  # PSIS-LOO via ArviZ
+  pointwise: true
+  scale: log
+  report: [elpd_loo, p_loo, se, elpd_diff, dse, pareto_k_warnings]
+
+sensitivity:
+  prior_variants: [regularizing, tight, wide]
+  lineage_resolutions: [lineage, family, strict]
+  restrictions:
+    - name: overlap_only
+      description: "Keep only host species observed in both habitats."
+    - name: no_pools
+      description: "Keep only libraries from single documented animals."
+    - name: drop_rare_lineages
+      description: "Require >=5 detections per lineage."
+    - name: depth_matched
+      description: "Trim to the overlapping effective-depth range across habitats."
