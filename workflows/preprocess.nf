@@ -18,7 +18,11 @@ workflow PREPROCESS {
     emit:
     processed       = HARMONIZE_METADATA.out.processed
     qc              = RUN_QC_GATES.out.qc
-    primary_allowed = RUN_QC_GATES.out.primary_allowed
+    // The gate verdict routes the run: true fits the primary habitat model,
+    // false falls through to the descriptive branch. Read from a file rather
+    // than an `env` output, which older Nextflow releases do not support.
+    primary_allowed = RUN_QC_GATES.out.qc.map { qc ->
+                          file("${qc}/primary_model_allowed.txt").text.trim() }
     frames          = CREATE_MATRIX.out.frame
     // The first configured resolution drives modelling; the rest are
     // sensitivity analyses. Emitted as an expression rather than a local:

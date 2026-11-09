@@ -36,8 +36,7 @@ process RUN_QC_GATES {
     path processed
 
     output:
-    path 'qc',                  emit: qc
-    env('PRIMARY_ALLOWED'),     emit: primary_allowed
+    path 'qc', emit: qc
 
     script:
     def synthetic = params.synthetic ? '--synthetic' : ''
@@ -46,10 +45,5 @@ process RUN_QC_GATES {
     python -m evonexus.cli qc \\
         --processed-dir ${processed} \\
         --out-dir qc ${synthetic} ${strict}
-
-    # Read back the verdict so the workflow can route to the primary model or
-    # to the descriptive branch. A critical gate failure is not an error here:
-    # it is a documented outcome.
-    PRIMARY_ALLOWED=\$(python -c "import json;print(json.load(open('qc/qc_gates.json'))['primary_model_allowed'])")
     """
 }

@@ -169,6 +169,12 @@ def run_qc(
     payload["synthetic"] = synthetic
     json_path = write_json(payload, out / "qc_gates.json")
     md_path = write_text(_render_report(report, tables, waterfall, synthetic), out / "qc_report.md")
+    # A one-word verdict file. The workflow reads this to route to the primary
+    # model or the descriptive branch; a plain file works on every Nextflow
+    # version, whereas an `env` output does not.
+    verdict_path = write_text(
+        f"{report.primary_model_allowed}\n", out / "primary_model_allowed.txt"
+    )
     wf_path = write_table(waterfall, out / "exclusion_waterfall")
     gate_table = write_table(
         pd.DataFrame(
@@ -180,7 +186,7 @@ def run_qc(
         ),
         out / "qc_gate_summary",
     )
-    for p in (json_path, md_path, wf_path, gate_table):
+    for p in (json_path, md_path, wf_path, gate_table, verdict_path):
         record.add_output(p, role="qc")
 
     for r in report.critical_failures:
