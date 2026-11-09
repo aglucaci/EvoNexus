@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from evonexus.core.io import read_json, write_text
 
@@ -29,41 +29,41 @@ def _normalize(name: str) -> str:
 @dataclass
 class FieldResolution:
     canonical: str
-    source_column: Optional[str]
+    source_column: str | None
     required: bool
     method: str              # exact | normalized | absent
-    candidates: List[str] = field(default_factory=list)
+    candidates: list[str] = field(default_factory=list)
 
 
 @dataclass
 class EntityResolution:
     entity: str
-    source_table: Optional[str]
-    source_path: Optional[str]
-    fields: List[FieldResolution] = field(default_factory=list)
+    source_table: str | None
+    source_path: str | None
+    fields: list[FieldResolution] = field(default_factory=list)
     table_selection_method: str = "unresolved"
 
     @property
-    def missing_required(self) -> List[str]:
+    def missing_required(self) -> list[str]:
         return [f.canonical for f in self.fields if f.required and f.source_column is None]
 
-    def column_map(self) -> Dict[str, str]:
+    def column_map(self) -> dict[str, str]:
         return {f.source_column: f.canonical for f in self.fields if f.source_column}
 
 
 @dataclass
 class ResolvedMapping:
-    entities: Dict[str, EntityResolution]
+    entities: dict[str, EntityResolution]
     approved: bool
-    approved_by: Optional[str]
-    vocabularies: Dict[str, Any]
-    missing_tokens: List[str]
-    extras: Dict[str, Any] = field(default_factory=dict)
-    warnings: List[str] = field(default_factory=list)
+    approved_by: str | None
+    vocabularies: dict[str, Any]
+    missing_tokens: list[str]
+    extras: dict[str, Any] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
 
     @property
-    def blocking_problems(self) -> List[str]:
-        problems: List[str] = []
+    def blocking_problems(self) -> list[str]:
+        problems: list[str] = []
         for name, ent in self.entities.items():
             if ent.source_path is None:
                 problems.append(f"{name}: no source table identified")
@@ -73,13 +73,13 @@ class ResolvedMapping:
         return problems
 
 
-def _table_entries(inventory: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _table_entries(inventory: dict[str, Any]) -> list[dict[str, Any]]:
     return [f for f in inventory.get("files", [])
             if f.get("kind") == "table" and f.get("readable")]
 
 
-def _select_table(entity: str, declared: Optional[str], tables: List[Dict[str, Any]],
-                  overrides: Dict[str, Any], allow_role_guess: bool) -> tuple[Optional[Dict[str, Any]], str]:
+def _select_table(entity: str, declared: str | None, tables: list[dict[str, Any]],
+                  overrides: dict[str, Any], allow_role_guess: bool) -> tuple[dict[str, Any] | None, str]:
     override = ((overrides.get("entities") or {}).get(entity) or {}).get("source_table")
     wanted = declared or override
     if wanted:
@@ -99,13 +99,13 @@ def _select_table(entity: str, declared: Optional[str], tables: List[Dict[str, A
     return None, "no source table declared"
 
 
-def _resolve_fields(spec: Dict[str, Any], columns: List[str]) -> List[FieldResolution]:
+def _resolve_fields(spec: dict[str, Any], columns: list[str]) -> list[FieldResolution]:
     by_exact = {c: c for c in columns}
-    by_norm: Dict[str, str] = {}
+    by_norm: dict[str, str] = {}
     for c in columns:
         by_norm.setdefault(_normalize(c), c)
 
-    out: List[FieldResolution] = []
+    out: list[FieldResolution] = []
     for canonical, rule in (spec.get("fields") or {}).items():
         candidates = list(rule.get("candidates") or [])
         required = bool(rule.get("required", False))
@@ -125,14 +125,14 @@ def _resolve_fields(spec: Dict[str, Any], columns: List[str]) -> List[FieldResol
 
 
 def resolve_mapping(
-    inventory: Dict[str, Any],
-    mapping_config: Dict[str, Any],
+    inventory: dict[str, Any],
+    mapping_config: dict[str, Any],
     overrides_path: str | Path | None = None,
     allow_role_guess: bool = False,
     require_approval: bool = True,
 ) -> ResolvedMapping:
     """Resolve the configured mapping against a concrete inventory."""
-    overrides: Dict[str, Any] = {}
+    overrides: dict[str, Any] = {}
     if overrides_path and Path(overrides_path).exists():
         overrides = read_json(overrides_path)
 
@@ -140,8 +140,8 @@ def resolve_mapping(
     approved_by = mapping_config.get("approved_by") or overrides.get("approved_by")
 
     tables = _table_entries(inventory)
-    entities: Dict[str, EntityResolution] = {}
-    warnings: List[str] = []
+    entities: dict[str, EntityResolution] = {}
+    warnings: list[str] = []
 
     for entity in CANONICAL_ENTITIES:
         spec = (mapping_config.get("entities") or {}).get(entity) or {}

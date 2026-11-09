@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -21,8 +21,8 @@ class ArtifactStore:
     """Lazy, forgiving access to the results tree."""
 
     root: Path
-    missing: List[str] = field(default_factory=list)
-    _cache: Dict[str, Any] = field(default_factory=dict, repr=False)
+    missing: list[str] = field(default_factory=list)
+    _cache: dict[str, Any] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         self.root = Path(self.root)
@@ -31,7 +31,7 @@ class ArtifactStore:
     def path(self, *parts: str) -> Path:
         return self.root.joinpath(*parts)
 
-    def table(self, *parts: str) -> Optional[pd.DataFrame]:
+    def table(self, *parts: str) -> pd.DataFrame | None:
         key = "table:" + "/".join(parts)
         if key in self._cache:
             return self._cache[key]
@@ -43,7 +43,7 @@ class ArtifactStore:
         self._cache[key] = df
         return df
 
-    def json(self, *parts: str) -> Optional[Dict[str, Any]]:
+    def json(self, *parts: str) -> dict[str, Any] | None:
         key = "json:" + "/".join(parts)
         if key in self._cache:
             return self._cache[key]
@@ -71,88 +71,88 @@ class ArtifactStore:
             return False
 
     # -- named artifacts --------------------------------------------------
-    def canonical(self, name: str) -> Optional[pd.DataFrame]:
+    def canonical(self, name: str) -> pd.DataFrame | None:
         return self.table("processed", name)
 
-    def qc(self) -> Optional[Dict[str, Any]]:
+    def qc(self) -> dict[str, Any] | None:
         return self.json("qc", "qc_gates.json")
 
-    def waterfall(self) -> Optional[pd.DataFrame]:
+    def waterfall(self) -> pd.DataFrame | None:
         return self.table("qc", "exclusion_waterfall")
 
-    def analysis_frame(self, resolution: str = "lineage") -> Optional[pd.DataFrame]:
+    def analysis_frame(self, resolution: str = "lineage") -> pd.DataFrame | None:
         return self.table("matrix", f"analysis_frame_{resolution}")
 
-    def matrix_metadata(self, resolution: str = "lineage") -> Optional[Dict[str, Any]]:
+    def matrix_metadata(self, resolution: str = "lineage") -> dict[str, Any] | None:
         return self.json("matrix", f"matrix_metadata_{resolution}.json")
 
-    def contrast(self) -> Optional[pd.DataFrame]:
+    def contrast(self) -> pd.DataFrame | None:
         return self.table("bayesian", "habitat_contrast")
 
-    def contrast_by_family(self) -> Optional[pd.DataFrame]:
+    def contrast_by_family(self) -> pd.DataFrame | None:
         return self.table("bayesian", "habitat_contrast_by_family")
 
-    def contrast_draws(self) -> Optional[pd.DataFrame]:
+    def contrast_draws(self) -> pd.DataFrame | None:
         return self.table("bayesian", "habitat_contrast_draws")
 
-    def contrast_metadata(self) -> Optional[Dict[str, Any]]:
+    def contrast_metadata(self) -> dict[str, Any] | None:
         return self.json("bayesian", "habitat_contrast_metadata.json")
 
-    def raw_rates(self) -> Optional[pd.DataFrame]:
+    def raw_rates(self) -> pd.DataFrame | None:
         return self.table("bayesian", "raw_detection_rates")
 
-    def sensitivity(self) -> Optional[pd.DataFrame]:
+    def sensitivity(self) -> pd.DataFrame | None:
         return self.table("bayesian", "sensitivity")
 
-    def model_comparison(self) -> Optional[pd.DataFrame]:
+    def model_comparison(self) -> pd.DataFrame | None:
         return self.table("bayesian", "model_comparison")
 
-    def bayesian_status(self) -> Optional[Dict[str, Any]]:
+    def bayesian_status(self) -> dict[str, Any] | None:
         return self.json("bayesian", "bayesian_status.json")
 
-    def prior_check(self) -> Optional[Dict[str, Any]]:
+    def prior_check(self) -> dict[str, Any] | None:
         return self.json("bayesian", "prior_predictive_check.json")
 
-    def posterior_predictive(self) -> Optional[Dict[str, Any]]:
+    def posterior_predictive(self) -> dict[str, Any] | None:
         return self.json("bayesian", "posterior_predictive_check.json")
 
-    def parameter_recovery(self) -> Optional[pd.DataFrame]:
+    def parameter_recovery(self) -> pd.DataFrame | None:
         return self.table("bayesian", "parameter_recovery")
 
-    def convergence(self, model: str) -> Optional[Dict[str, Any]]:
+    def convergence(self, model: str) -> dict[str, Any] | None:
         return self.json("bayesian", f"convergence_{model}.json")
 
-    def posterior_summary(self, model: str) -> Optional[pd.DataFrame]:
+    def posterior_summary(self, model: str) -> pd.DataFrame | None:
         return self.table("bayesian", f"posterior_summary_{model}")
 
-    def connectivity(self) -> Optional[pd.DataFrame]:
+    def connectivity(self) -> pd.DataFrame | None:
         return self.table("connectivity", "connectivity")
 
-    def connectivity_metadata(self) -> Optional[Dict[str, Any]]:
+    def connectivity_metadata(self) -> dict[str, Any] | None:
         return self.json("connectivity", "connectivity_metadata.json")
 
-    def connectivity_permutation(self) -> Optional[pd.DataFrame]:
+    def connectivity_permutation(self) -> pd.DataFrame | None:
         return self.table("connectivity", "connectivity_permutation_null")
 
-    def selection_results(self) -> Optional[pd.DataFrame]:
+    def selection_results(self) -> pd.DataFrame | None:
         return self.table("evolution", "selection_results")
 
-    def evolution_status(self) -> Optional[Dict[str, Any]]:
+    def evolution_status(self) -> dict[str, Any] | None:
         return self.json("evolution", "evolution_status.json")
 
-    def lineage_results(self) -> Optional[pd.DataFrame]:
+    def lineage_results(self) -> pd.DataFrame | None:
         return self.table("evolution", "evolution_lineage_results")
 
-    def cv_folds(self) -> Optional[pd.DataFrame]:
+    def cv_folds(self) -> pd.DataFrame | None:
         return self.table("validation", "cv_folds")
 
-    def calibration(self, group: str = "site_id") -> Optional[pd.DataFrame]:
+    def calibration(self, group: str = "site_id") -> pd.DataFrame | None:
         return self.table("validation", f"calibration_{group}")
 
-    def validation_metadata(self) -> Optional[Dict[str, Any]]:
+    def validation_metadata(self) -> dict[str, Any] | None:
         return self.json("validation", "validation_metadata.json")
 
-    def manifest(self) -> Optional[Dict[str, Any]]:
+    def manifest(self) -> dict[str, Any] | None:
         return self.json("acquisition", "manifest.json")
 
     # -- provenance -------------------------------------------------------
@@ -163,7 +163,7 @@ class ArtifactStore:
                 return True
         return False
 
-    def availability(self, requirements: Dict[str, bool]) -> Dict[str, Any]:
+    def availability(self, requirements: dict[str, bool]) -> dict[str, Any]:
         present = {k: v for k, v in requirements.items() if v}
         absent = sorted(k for k, v in requirements.items() if not v)
         return {"available": sorted(present), "missing": absent, "complete": not absent}

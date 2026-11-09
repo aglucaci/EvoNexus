@@ -7,8 +7,9 @@ comparisons stay well defined.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -29,12 +30,12 @@ def _standardize(values: pd.Series) -> tuple[pd.Series, float, float]:
 
 
 def build_analysis_frame(
-    tables: Dict[str, pd.DataFrame],
-    filters: Dict[str, Any],
+    tables: dict[str, pd.DataFrame],
+    filters: dict[str, Any],
     resolution: str = "lineage",
     drop_mixed_pools: bool = True,
     require_known_habitat: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Join the canonical tables into one eligible-cell frame.
 
     Returns the frame, the standardization constants (needed to interpret and
@@ -45,7 +46,7 @@ def build_analysis_frame(
         tables["viruses"].copy(), tables["detections"].copy(),
     )
     eco = tables.get("ecology", pd.DataFrame()).copy()
-    ledger: List[Dict[str, Any]] = []
+    ledger: list[dict[str, Any]] = []
 
     def note(stage: str, n_cells: int, reason: str) -> None:
         ledger.append({"stage": stage, "cells_remaining": int(n_cells), "reason": reason})
@@ -182,7 +183,7 @@ def build_analysis_frame(
     df["log_depth"] = np.log(pd.to_numeric(df["effective_depth"], errors="coerce"))
     df["log_pool_size"] = np.log(pd.to_numeric(df["pool_size"], errors="coerce").fillna(1.0).clip(lower=1.0))
 
-    standardization: Dict[str, Dict[str, float]] = {}
+    standardization: dict[str, dict[str, float]] = {}
     for col, target in (("log_depth", "log_depth_z"), ("log_pool_size", "log_pool_size_z"),
                         ("collection_time", "time_z")):
         values, mu, sd = _standardize(df[col])
@@ -209,7 +210,7 @@ def build_analysis_frame(
     note("final", len(frame), "Cells entering the likelihood")
 
     summary = {
-        "n_cells": int(len(frame)),
+        "n_cells": len(frame),
         "n_libraries": int(frame["library_id"].nunique()),
         "n_virus_units": int(frame["virus_unit"].nunique()),
         "n_families": int(frame["virus_family"].nunique()),
@@ -244,7 +245,7 @@ def _restrict_overlap_only(frame: pd.DataFrame) -> pd.DataFrame:
     return frame[frame["host_species"].isin(keep)]
 
 
-def _restrict_no_pools(frame: pd.DataFrame, tables: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+def _restrict_no_pools(frame: pd.DataFrame, tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
     hosts = tables.get("hosts", pd.DataFrame())
     if hosts.empty:
         return frame
@@ -271,7 +272,7 @@ def _restrict_depth_matched(frame: pd.DataFrame) -> pd.DataFrame:
     return frame[(frame["log_depth_z"] >= lo) & (frame["log_depth_z"] <= hi)]
 
 
-RESTRICTIONS: Dict[str, Callable[..., pd.DataFrame]] = {
+RESTRICTIONS: dict[str, Callable[..., pd.DataFrame]] = {
     "none": lambda frame, tables=None: frame,
     "overlap_only": lambda frame, tables=None: _restrict_overlap_only(frame),
     "no_pools": lambda frame, tables=None: _restrict_no_pools(frame, tables or {}),
@@ -281,7 +282,7 @@ RESTRICTIONS: Dict[str, Callable[..., pd.DataFrame]] = {
 
 
 def apply_restriction(frame: pd.DataFrame, name: str,
-                      tables: Dict[str, pd.DataFrame] | None = None) -> pd.DataFrame:
+                      tables: dict[str, pd.DataFrame] | None = None) -> pd.DataFrame:
     func = RESTRICTIONS.get(name)
     if func is None:
         raise KeyError(f"unknown restriction {name!r}; available: {sorted(RESTRICTIONS)}")
@@ -307,7 +308,7 @@ def run_matrix(
     resolution: str = "lineage",
     filters_config: str = "viral_filters",
     synthetic: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     from evonexus.qc.run import load_canonical
 
     out = Path(out_dir)

@@ -8,8 +8,9 @@ observed category, and validation refuses tables that lose that distinction.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Sequence
+from typing import Any
 
 import pandas as pd
 
@@ -34,7 +35,7 @@ class TableSchema:
     unit: str
     primary_key: Sequence[str]
     columns: Sequence[Column]
-    foreign_keys: Dict[str, str] = field(default_factory=dict)
+    foreign_keys: dict[str, str] = field(default_factory=dict)
 
     def column(self, name: str) -> Column | None:
         for col in self.columns:
@@ -47,7 +48,7 @@ HABITAT_LEVELS = ("settlement", "wild", "unknown")
 DETECTION_LEVELS = ("positive", "negative", "unassessable")
 POOL_LEVELS = ("individual", "pool", "unknown")
 
-CANONICAL_SCHEMAS: Dict[str, TableSchema] = {
+CANONICAL_SCHEMAS: dict[str, TableSchema] = {
     "sites": TableSchema(
         name="sites",
         unit="sampling site",
@@ -193,7 +194,7 @@ def _dtype_ok(series: pd.Series, dtype: str) -> bool:
     return True
 
 
-def validate_table(df: pd.DataFrame, schema_name: str, strict: bool = True) -> List[str]:
+def validate_table(df: pd.DataFrame, schema_name: str, strict: bool = True) -> list[str]:
     """Validate ``df`` against a canonical schema.
 
     Returns a list of problem descriptions. With ``strict=True`` a non-empty
@@ -203,7 +204,7 @@ def validate_table(df: pd.DataFrame, schema_name: str, strict: bool = True) -> L
     if schema is None:
         raise KeyError(f"unknown canonical schema {schema_name!r}")
 
-    problems: List[str] = []
+    problems: list[str] = []
 
     for col in schema.columns:
         if col.name not in df.columns:
@@ -259,9 +260,9 @@ def validate_table(df: pd.DataFrame, schema_name: str, strict: bool = True) -> L
     return problems
 
 
-def check_foreign_keys(tables: Dict[str, pd.DataFrame], strict: bool = False) -> List[str]:
+def check_foreign_keys(tables: dict[str, pd.DataFrame], strict: bool = False) -> list[str]:
     """Check declared foreign keys across the harmonized tables."""
-    problems: List[str] = []
+    problems: list[str] = []
     for name, schema in CANONICAL_SCHEMAS.items():
         child = tables.get(name)
         if child is None:
@@ -284,7 +285,7 @@ def check_foreign_keys(tables: Dict[str, pd.DataFrame], strict: bool = False) ->
     return problems
 
 
-def schema_as_dict() -> Dict[str, Any]:
+def schema_as_dict() -> dict[str, Any]:
     """Machine-readable dump used to generate ``docs/DATA_DICTIONARY.md``."""
     return {
         name: {

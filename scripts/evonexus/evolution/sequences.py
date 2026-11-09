@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 
-def read_fasta(path: str | Path) -> Dict[str, str]:
+def read_fasta(path: str | Path) -> dict[str, str]:
     """Minimal FASTA reader; keeps the full header line as the key."""
-    records: Dict[str, str] = {}
+    records: dict[str, str] = {}
     name: str | None = None
-    chunks: List[str] = []
+    chunks: list[str] = []
     with Path(path).open("r", encoding="utf-8", errors="replace") as handle:
         for line in handle:
             line = line.rstrip("\n\r")
@@ -29,7 +29,7 @@ def read_fasta(path: str | Path) -> Dict[str, str]:
     return records
 
 
-def write_fasta(records: Dict[str, str], path: str | Path, line_width: int = 60) -> Path:
+def write_fasta(records: dict[str, str], path: str | Path, line_width: int = 60) -> Path:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     with target.open("w", encoding="utf-8") as handle:
@@ -44,7 +44,7 @@ def ungapped_length(seq: str) -> int:
     return sum(1 for c in seq if c not in "-.~ ")
 
 
-def mean_pairwise_divergence(records: Dict[str, str], max_pairs: int = 5000,
+def mean_pairwise_divergence(records: dict[str, str], max_pairs: int = 5000,
                              seed: int = 0) -> float:
     """Uncorrected p-distance averaged over aligned pairs."""
     seqs = [s.upper() for s in records.values()]
@@ -55,7 +55,7 @@ def mean_pairwise_divergence(records: Dict[str, str], max_pairs: int = 5000,
     if len(lengths) != 1:
         return float("nan")      # not an alignment
     rng = np.random.default_rng(seed)
-    pairs: List[Tuple[int, int]] = [(i, j) for i in range(n) for j in range(i + 1, n)]
+    pairs: list[tuple[int, int]] = [(i, j) for i in range(n) for j in range(i + 1, n)]
     if len(pairs) > max_pairs:
         idx = rng.choice(len(pairs), max_pairs, replace=False)
         pairs = [pairs[i] for i in idx]
@@ -70,7 +70,7 @@ def mean_pairwise_divergence(records: Dict[str, str], max_pairs: int = 5000,
     return float(np.mean(distances)) if distances else float("nan")
 
 
-def gap_fractions(records: Dict[str, str]) -> Tuple[Dict[str, float], np.ndarray]:
+def gap_fractions(records: dict[str, str]) -> tuple[dict[str, float], np.ndarray]:
     seqs = list(records.values())
     if not seqs:
         return {}, np.zeros(0)
@@ -87,9 +87,9 @@ def gap_fractions(records: Dict[str, str]) -> Tuple[Dict[str, float], np.ndarray
 def select_lineages(
     viruses: pd.DataFrame,
     detections: pd.DataFrame,
-    sequences: Dict[str, str],
-    config: Dict[str, Any],
-) -> Dict[str, Any]:
+    sequences: dict[str, str],
+    config: dict[str, Any],
+) -> dict[str, Any]:
     """Pick lineages with enough homologous sequence for phylogenetics.
 
     Lineages that do not qualify are returned in ``excluded`` with the reason,
@@ -102,21 +102,21 @@ def select_lineages(
     focal = set(rules.get("focal_families") or [])
 
     # Sequences are assigned to lineages by a prefix in the FASTA header.
-    by_lineage: Dict[str, Dict[str, str]] = {}
+    by_lineage: dict[str, dict[str, str]] = {}
     for header, seq in sequences.items():
         token = header.split()[0] if header.split() else header
         lineage = token.split("|")[0]
         by_lineage.setdefault(lineage, {})[header] = seq
 
-    selected: Dict[str, Dict[str, str]] = {}
-    excluded: List[Dict[str, Any]] = []
-    rows: List[Dict[str, Any]] = []
+    selected: dict[str, dict[str, str]] = {}
+    excluded: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
 
     families = (
         viruses.set_index("virus_id")["virus_family"].astype(str).to_dict()
         if len(viruses) else {}
     )
-    detected_hosts: Dict[str, int] = {}
+    detected_hosts: dict[str, int] = {}
     if len(detections):
         pos = detections[detections["detection"] == "positive"]
         detected_hosts = pos.groupby("virus_id")["library_id"].nunique().to_dict()

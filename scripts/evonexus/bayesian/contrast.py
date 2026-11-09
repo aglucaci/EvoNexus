@@ -18,7 +18,7 @@ carries that statement.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -82,13 +82,13 @@ def _build_grid(profiles: pd.DataFrame, lineages: pd.DataFrame) -> pd.DataFrame:
 
 
 def standardized_predictions(
-    posterior: Dict[str, Any],
+    posterior: dict[str, Any],
     frame: pd.DataFrame,
     overlap_only: bool = True,
     max_libraries: int = 120,
     seed: int = 20250101,
     chunk_size: int = 4000,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Posterior draws of standardized detection probability per habitat."""
     predictor = PosteriorPredictor(posterior)
     profiles = reference_population(frame, overlap_only, max_libraries, seed)
@@ -155,8 +155,8 @@ def standardized_predictions(
             for h in unique_hosts
         },
         "reference": {
-            "n_library_profiles": int(len(profiles)),
-            "n_lineages": int(len(lineages)),
+            "n_library_profiles": len(profiles),
+            "n_lineages": len(lineages),
             "n_standardization_cells": n_cells,
             "overlap_only": overlap_only,
             "libraries_used": profiles["library_id"].tolist(),
@@ -167,7 +167,7 @@ def standardized_predictions(
     }
 
 
-def _summary_row(label: str, draws: np.ndarray, scale: str, hdi_prob: float = 0.95) -> Dict[str, Any]:
+def _summary_row(label: str, draws: np.ndarray, scale: str, hdi_prob: float = 0.95) -> dict[str, Any]:
     flat = np.asarray(draws, dtype=float).reshape(-1)
     lo, hi = hdi(flat, hdi_prob)
     return {
@@ -184,18 +184,18 @@ def _summary_row(label: str, draws: np.ndarray, scale: str, hdi_prob: float = 0.
 
 
 def habitat_contrast(
-    posterior: Dict[str, Any],
+    posterior: dict[str, Any],
     frame: pd.DataFrame,
     hdi_prob: float = 0.95,
     **kwargs: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Standardized settlement-versus-wild contrast, overall and per family."""
     std = standardized_predictions(posterior, frame, **kwargs)
     if std.get("status") != "ok":
         return {"status": std.get("status", "failed"), "reason": std.get("reason"),
                 "table": pd.DataFrame(), "caveat": ESTIMAND_CAVEAT}
 
-    rows: List[Dict[str, Any]] = [
+    rows: list[dict[str, Any]] = [
         _summary_row("standardized detection probability (settlement)",
                      std["p_settlement"], "probability", hdi_prob),
         _summary_row("standardized detection probability (wild)",
@@ -210,14 +210,14 @@ def habitat_contrast(
         rows.append(_summary_row("habitat coefficient beta_U", beta_u, "log odds", hdi_prob))
         rows.append(_summary_row("habitat odds ratio", np.exp(beta_u), "odds ratio", hdi_prob))
 
-    family_rows: List[Dict[str, Any]] = []
+    family_rows: list[dict[str, Any]] = []
     for family, draws in std["by_family"].items():
         diff = draws["p_settlement"] - draws["p_wild"]
         row = _summary_row(f"difference — {family}", diff, "probability difference", hdi_prob)
         row["virus_family"] = family
         family_rows.append(row)
 
-    host_rows: List[Dict[str, Any]] = []
+    host_rows: list[dict[str, Any]] = []
     for host, draws in std["by_host"].items():
         diff = draws["p_settlement"] - draws["p_wild"]
         row = _summary_row(f"difference — {host}", diff, "probability difference", hdi_prob)
@@ -256,11 +256,11 @@ def raw_detection_rates(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def posterior_predictive_replicates(
-    posterior: Dict[str, Any],
+    posterior: dict[str, Any],
     frame: pd.DataFrame,
     n_replicates: int = 200,
     seed: int = 20250101,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Replicate datasets under the fitted model, for posterior checks."""
     predictor = PosteriorPredictor(posterior)
     if frame.empty:
@@ -272,7 +272,7 @@ def posterior_predictive_replicates(
     y_rep = (rng.random(p.shape) < p).astype(float)
     observed = pd.to_numeric(frame["y"], errors="coerce").to_numpy(float)
 
-    def summarize(matrix: np.ndarray, column: str) -> Dict[str, Any]:
+    def summarize(matrix: np.ndarray, column: str) -> dict[str, Any]:
         groups = frame[column].astype(str).to_numpy()
         levels = sorted(set(groups))
         return {

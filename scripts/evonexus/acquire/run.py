@@ -11,7 +11,7 @@ Three outputs, always:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pandas as pd
 
@@ -24,7 +24,7 @@ from evonexus.core.provenance import RunRecord, utc_now
 MODES = ("processed_only", "raw_reads")
 
 
-def _client(cfg: Dict[str, Any], offline: bool) -> sources.HttpClient:
+def _client(cfg: dict[str, Any], offline: bool) -> sources.HttpClient:
     http = cfg.get("http", {}) or {}
     return sources.HttpClient(
         user_agent=http.get("user_agent", "EvoNexus/0.1"),
@@ -35,8 +35,8 @@ def _client(cfg: Dict[str, Any], offline: bool) -> sources.HttpClient:
     )
 
 
-def _acquire_figshare(client, name, spec, raw_dir, record) -> Dict[str, Any]:
-    entry: Dict[str, Any] = {"source": name, "kind": "figshare", "status": "pending"}
+def _acquire_figshare(client, name, spec, raw_dir, record) -> dict[str, Any]:
+    entry: dict[str, Any] = {"source": name, "kind": "figshare", "status": "pending"}
     dest = Path(raw_dir) / name
     try:
         meta = sources.figshare_article_metadata(
@@ -52,7 +52,7 @@ def _acquire_figshare(client, name, spec, raw_dir, record) -> Dict[str, Any]:
 
     entry["article_metadata"] = meta
     entry["files_listed"] = files
-    downloaded: List[Dict[str, Any]] = []
+    downloaded: list[dict[str, Any]] = []
     for f in files:
         url = f.get("download_url")
         if not url:
@@ -78,9 +78,9 @@ def _acquire_figshare(client, name, spec, raw_dir, record) -> Dict[str, Any]:
     return entry
 
 
-def _acquire_sra(client, name, spec, raw_dir, record, mode) -> Dict[str, Any]:
+def _acquire_sra(client, name, spec, raw_dir, record, mode) -> dict[str, Any]:
     accession = spec.get("accession")
-    entry: Dict[str, Any] = {"source": name, "kind": "sra_bioproject",
+    entry: dict[str, Any] = {"source": name, "kind": "sra_bioproject",
                              "accession": accession, "status": "pending"}
     dest = Path(raw_dir) / name
     dest.mkdir(parents=True, exist_ok=True)
@@ -98,7 +98,7 @@ def _acquire_sra(client, name, spec, raw_dir, record, mode) -> Dict[str, Any]:
         df.to_csv(runinfo_path, index=False)
     entry["runinfo_path"] = str(runinfo_path)
     entry["runinfo_sha256"] = sha256_file(runinfo_path) if runinfo_path.exists() else None
-    entry["n_runs"] = int(len(df))
+    entry["n_runs"] = len(df)
     if len(df) and "bases" in df.columns:
         entry["total_bases"] = int(pd.to_numeric(df["bases"], errors="coerce").fillna(0).sum())
     record.note(f"{name}: {len(df)} SRA runs recorded for {accession}")
@@ -117,8 +117,8 @@ def _acquire_sra(client, name, spec, raw_dir, record, mode) -> Dict[str, Any]:
     return entry
 
 
-def _acquire_genbank(client, name, spec, raw_dir, record) -> Dict[str, Any]:
-    entry: Dict[str, Any] = {"source": name, "kind": "ncbi_nuccore", "status": "pending"}
+def _acquire_genbank(client, name, spec, raw_dir, record) -> dict[str, Any]:
+    entry: dict[str, Any] = {"source": name, "kind": "ncbi_nuccore", "status": "pending"}
     query_file = Path(spec.get("query_file", "config/genbank_queries.txt"))
     if not query_file.exists():
         entry.update(status="skipped", reason=f"no query file at {query_file}")
@@ -161,7 +161,7 @@ def run_acquire(
     synthetic_seed: int = 20250101,
     synthetic_libraries: int = 120,
     synthetic_viruses: int = 30,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Acquire sources (or generate synthetic ones) and inventory the result."""
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
@@ -173,7 +173,7 @@ def run_acquire(
                                                "synthetic": synthetic})
     record.synthetic = synthetic
 
-    entries: List[Dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
 
     if synthetic:
         from evonexus.simulate import simulate

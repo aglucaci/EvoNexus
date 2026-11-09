@@ -15,14 +15,15 @@ host-by-family interaction shrinkable rather than a free parameter per cell.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
 
 # term -> (kind, prior key)
-TERM_SPEC: Dict[str, Tuple[str, str]] = {
+TERM_SPEC: dict[str, tuple[str, str]] = {
     "intercept": ("intercept", "intercept"),
     "virus_family": ("block", "family_sd"),
     "virus_lineage": ("block", "lineage_sd"),
@@ -39,7 +40,7 @@ TERM_SPEC: Dict[str, Tuple[str, str]] = {
     "host_phylo": ("block_cov", "host_phylo_sd"),
 }
 
-TERM_COLUMN: Dict[str, str] = {
+TERM_COLUMN: dict[str, str] = {
     "virus_family": "virus_family",
     "virus_lineage": "virus_unit",
     "host": "host_species",
@@ -59,7 +60,7 @@ class Block:
 
     name: str
     prior_key: str
-    levels: List[str]
+    levels: list[str]
     index: np.ndarray                 # per-observation level index
     covariance: np.ndarray | None = None   # for phylogenetic blocks
 
@@ -71,17 +72,17 @@ class Block:
 @dataclass
 class ModelDesign:
     model_name: str
-    terms: List[str]
+    terms: list[str]
     y: np.ndarray
     n_obs: int
-    blocks: List[Block] = field(default_factory=list)
-    fixed_names: List[str] = field(default_factory=list)
-    fixed_prior_keys: List[str] = field(default_factory=list)
+    blocks: list[Block] = field(default_factory=list)
+    fixed_names: list[str] = field(default_factory=list)
+    fixed_prior_keys: list[str] = field(default_factory=list)
     X_fixed: np.ndarray = field(default_factory=lambda: np.zeros((0, 0)))
     has_intercept: bool = True
-    coords: Dict[str, List[str]] = field(default_factory=dict)
+    coords: dict[str, list[str]] = field(default_factory=dict)
     frame: pd.DataFrame | None = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def n_fixed(self) -> int:
@@ -96,7 +97,7 @@ class ModelDesign:
     def parameter_count(self) -> int:
         return int(self.has_intercept) + self.n_fixed + sum(b.size for b in self.blocks)
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         return {
             "model": self.model_name,
             "terms": self.terms,
@@ -108,7 +109,7 @@ class ModelDesign:
         }
 
 
-def _factorize(values: pd.Series) -> Tuple[np.ndarray, List[str]]:
+def _factorize(values: pd.Series) -> tuple[np.ndarray, list[str]]:
     cat = pd.Categorical(values.astype(str))
     return np.asarray(cat.codes, dtype=np.int64), [str(c) for c in cat.categories]
 
@@ -118,7 +119,7 @@ def build_design(
     terms: Sequence[str],
     model_name: str = "model",
     ecology_columns: Sequence[str] | None = None,
-    host_covariance: Dict[str, Any] | None = None,
+    host_covariance: dict[str, Any] | None = None,
 ) -> ModelDesign:
     """Build a :class:`ModelDesign` for one member of the model ladder."""
     if frame.empty:
@@ -136,11 +137,11 @@ def build_design(
             "must be removed before the design is built, not imputed"
         )
 
-    blocks: List[Block] = []
-    coords: Dict[str, List[str]] = {}
-    fixed_cols: List[np.ndarray] = []
-    fixed_names: List[str] = []
-    fixed_keys: List[str] = []
+    blocks: list[Block] = []
+    coords: dict[str, list[str]] = {}
+    fixed_cols: list[np.ndarray] = []
+    fixed_names: list[str] = []
+    fixed_keys: list[str] = []
 
     ecology_columns = list(ecology_columns or [c for c in frame.columns if c.endswith("_z")
                                                and c not in {"log_depth_z", "log_pool_size_z", "time_z"}])
@@ -257,11 +258,11 @@ def build_design(
     return design
 
 
-def design_matrix(design: ModelDesign) -> Tuple[np.ndarray, List[str], List[Tuple[str, int, int]]]:
+def design_matrix(design: ModelDesign) -> tuple[np.ndarray, list[str], list[tuple[str, int, int]]]:
     """Dense design matrix plus column names and (block, start, stop) spans."""
-    parts: List[np.ndarray] = []
-    names: List[str] = []
-    spans: List[Tuple[str, int, int]] = []
+    parts: list[np.ndarray] = []
+    names: list[str] = []
+    spans: list[tuple[str, int, int]] = []
     cursor = 0
 
     if design.has_intercept:

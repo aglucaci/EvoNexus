@@ -8,7 +8,8 @@ whichever path runs.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -29,7 +30,7 @@ def _arviz():
 # ---------------------------------------------------------------------------
 def _split_chains(x: np.ndarray) -> np.ndarray:
     """(chain, draw) -> (2*chain, draw/2)."""
-    n_chain, n_draw = x.shape
+    _n_chain, n_draw = x.shape
     half = n_draw // 2
     if half < 2:
         return x
@@ -53,7 +54,7 @@ def rhat(x: np.ndarray) -> float:
         return 1.0
     z = _rank_normalize(x)
     s = _split_chains(z)
-    m, n = s.shape
+    _m, n = s.shape
     chain_means = s.mean(axis=1)
     chain_vars = s.var(axis=1, ddof=1)
     W = chain_vars.mean()
@@ -154,7 +155,7 @@ def summarize_posterior(
         arr = arr[None, ...]
     n_params = arr.shape[-1]
     idx = range(n_params if max_parameters is None else min(n_params, max_parameters))
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for j in idx:
         x = arr[..., j]
         flat = x.reshape(-1)
@@ -178,7 +179,7 @@ def summarize_posterior(
     return pd.DataFrame(rows)
 
 
-def convergence_report(posterior: Dict[str, Any], gates: Dict[str, Any]) -> Dict[str, Any]:
+def convergence_report(posterior: dict[str, Any], gates: dict[str, Any]) -> dict[str, Any]:
     """Apply the convergence gates from ``config/priors.yaml``."""
     beta = np.asarray(posterior["beta"], dtype=float)
     names = list(posterior.get("coefficient_names") or [])
@@ -210,7 +211,7 @@ def convergence_report(posterior: Dict[str, Any], gates: Dict[str, Any]) -> Dict
         "treedepth_hit_fraction": treedepth_hits / max(1, n_total),
     }
 
-    failures: List[str] = []
+    failures: list[str] = []
     if np.isfinite(metrics["max_rhat"]) and metrics["max_rhat"] > float(gates.get("max_rhat", 1.01)):
         worst = summary.loc[summary["r_hat"].idxmax(), "parameter"]
         failures.append(
@@ -247,7 +248,7 @@ def convergence_report(posterior: Dict[str, Any], gates: Dict[str, Any]) -> Dict
 # ---------------------------------------------------------------------------
 # information criteria
 # ---------------------------------------------------------------------------
-def psis_loo(log_lik: np.ndarray) -> Dict[str, Any]:
+def psis_loo(log_lik: np.ndarray) -> dict[str, Any]:
     """PSIS-LOO via ArviZ when available; otherwise plain importance-sampled LOO.
 
     The fallback reports ``method: "is_loo"`` and no Pareto-k diagnostics, so a
@@ -257,7 +258,7 @@ def psis_loo(log_lik: np.ndarray) -> Dict[str, Any]:
     arr = np.asarray(log_lik, dtype=float)
     if arr.ndim == 2:
         arr = arr[None, ...]
-    n_chain, n_draw, n_obs = arr.shape
+    _n_chain, _n_draw, n_obs = arr.shape
 
     if az is not None:
         try:
@@ -303,7 +304,7 @@ def psis_loo(log_lik: np.ndarray) -> Dict[str, Any]:
     }
 
 
-def compare_models(loos: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
+def compare_models(loos: dict[str, dict[str, Any]]) -> pd.DataFrame:
     """Rank models by ELPD with differences and their standard errors."""
     rows = []
     best_name = max(loos, key=lambda k: loos[k].get("elpd_loo", -np.inf))

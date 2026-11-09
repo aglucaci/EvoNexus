@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 
@@ -13,7 +13,7 @@ from evonexus.bayesian.design import ModelDesign
 from evonexus.core.io import read_json, write_json
 
 
-def available_engines() -> List[str]:
+def available_engines() -> list[str]:
     engines = [fallback_engine.ENGINE]
     if pymc_engine.pymc_available():
         engines.insert(0, pymc_engine.ENGINE)
@@ -36,11 +36,11 @@ def resolve_engine(requested: str = "auto") -> str:
 
 def fit_model(
     design: ModelDesign,
-    priors: Dict[str, Any],
-    sampler: Dict[str, Any] | None = None,
+    priors: dict[str, Any],
+    sampler: dict[str, Any] | None = None,
     engine: str = "auto",
     store_log_lik: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Fit one model and return posterior draws plus sampler metadata."""
     sampler = dict(sampler or {})
     chosen = resolve_engine(engine)
@@ -84,7 +84,7 @@ def fit_model(
     return posterior
 
 
-def _predictor_metadata(design: ModelDesign) -> Dict[str, Any]:
+def _predictor_metadata(design: ModelDesign) -> dict[str, Any]:
     return {
         "fixed_names": list(design.fixed_names),
         "has_intercept": bool(design.has_intercept),
@@ -98,8 +98,8 @@ def _predictor_metadata(design: ModelDesign) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # persistence
 # ---------------------------------------------------------------------------
-def save_posterior(posterior: Dict[str, Any], design: ModelDesign,
-                   out_dir: str | Path, name: str) -> Dict[str, str]:
+def save_posterior(posterior: dict[str, Any], design: ModelDesign,
+                   out_dir: str | Path, name: str) -> dict[str, str]:
     """Persist draws as .npz plus a JSON sidecar describing them."""
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -149,7 +149,7 @@ def save_posterior(posterior: Dict[str, Any], design: ModelDesign,
     return result
 
 
-def load_posterior(out_dir: str | Path, name: str) -> Dict[str, Any]:
+def load_posterior(out_dir: str | Path, name: str) -> dict[str, Any]:
     out = Path(out_dir)
     meta = read_json(out / f"posterior_{name}.json")
     with np.load(out / f"posterior_{name}.npz") as handle:

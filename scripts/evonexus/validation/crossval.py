@@ -8,8 +8,9 @@ being predicted would leak the answer and overstate generalization.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ from evonexus.core.io import read_table, write_json, write_table
 from evonexus.core.provenance import RunRecord
 
 
-def scoring_rules(y: np.ndarray, p_draws: np.ndarray) -> Dict[str, float]:
+def scoring_rules(y: np.ndarray, p_draws: np.ndarray) -> dict[str, float]:
     """Log predictive score, Brier score and AUC from posterior draws of p."""
     y = np.asarray(y, dtype=float)
     p_mean = p_draws.mean(axis=0)
@@ -45,7 +46,7 @@ def scoring_rules(y: np.ndarray, p_draws: np.ndarray) -> Dict[str, float]:
         "mean_lpd": float(lpd.mean()),
         "brier": brier,
         "auc": auc,
-        "n": int(len(y)),
+        "n": len(y),
         "observed_rate": float(y.mean()),
         "predicted_rate": float(p_mean.mean()),
     }
@@ -62,7 +63,7 @@ def calibration_curve(y: np.ndarray, p: np.ndarray, n_bins: int = 10) -> pd.Data
     quantiles[-1] += 1e-9
     bins = np.unique(quantiles)
     idx = np.clip(np.digitize(p, bins) - 1, 0, len(bins) - 2)
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for b in range(len(bins) - 1):
         mask = idx == b
         if not mask.any():
@@ -88,7 +89,7 @@ def calibration_curve(y: np.ndarray, p: np.ndarray, n_bins: int = 10) -> pd.Data
 
 
 def _folds(frame: pd.DataFrame, group_column: str, n_folds: int,
-           seed: int) -> List[tuple[str, np.ndarray]]:
+           seed: int) -> list[tuple[str, np.ndarray]]:
     groups = sorted(set(frame[group_column].astype(str)))
     rng = np.random.default_rng(seed)
     rng.shuffle(groups)
@@ -102,24 +103,24 @@ def _folds(frame: pd.DataFrame, group_column: str, n_folds: int,
 def cross_validate(
     frame: pd.DataFrame,
     terms: Sequence[str],
-    priors: Dict[str, Any],
-    sampler: Dict[str, Any],
+    priors: dict[str, Any],
+    sampler: dict[str, Any],
     group_column: str = "site_id",
     n_folds: int = 5,
     engine: str = "auto",
     seed: int = 20250101,
     ecology_columns: Sequence[str] | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Refit on training groups, predict held-out groups with integration."""
     folds = _folds(frame, group_column, n_folds, seed)
     if not folds:
         return {"status": "not_estimable",
                 "reason": f"fewer than two distinct {group_column} values"}
 
-    fold_rows: List[Dict[str, Any]] = []
-    pooled_y: List[np.ndarray] = []
-    pooled_p: List[np.ndarray] = []
-    failures: List[str] = []
+    fold_rows: list[dict[str, Any]] = []
+    pooled_y: list[np.ndarray] = []
+    pooled_p: list[np.ndarray] = []
+    failures: list[str] = []
 
     for fold_name, held_out in folds:
         test_mask = frame[group_column].astype(str).isin(set(map(str, held_out)))
@@ -142,7 +143,7 @@ def cross_validate(
             y = pd.to_numeric(test["y"], errors="coerce").to_numpy(float)
             scores = scoring_rules(y, p)
             scores.update({"fold": fold_name, "held_out_groups": list(map(str, held_out)),
-                           "n_train": int(len(train)), "group_column": group_column})
+                           "n_train": len(train), "group_column": group_column})
             fold_rows.append(scores)
             pooled_y.append(y)
             pooled_p.append(p.mean(axis=0))
@@ -163,7 +164,7 @@ def cross_validate(
             "mean_lpd": float(np.mean([r["mean_lpd"] for r in fold_rows])),
             "brier": float(np.mean([r["brier"] for r in fold_rows])),
             "auc": float(np.nanmean([r["auc"] for r in fold_rows])),
-            "n": int(len(y_all)),
+            "n": len(y_all),
         },
         "failures": failures,
         "note": (
@@ -188,7 +189,7 @@ def run_validation(
     tune: int | None = None,
     chains: int | None = None,
     synthetic: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     record = RunRecord(step="validation",
@@ -213,8 +214,8 @@ def run_validation(
     ecology_columns = [c for c in frame.columns if c.endswith("_z")
                        and c not in {"log_depth_z", "log_pool_size_z", "time_z"}]
 
-    results: Dict[str, Any] = {}
-    all_folds: List[pd.DataFrame] = []
+    results: dict[str, Any] = {}
+    all_folds: list[pd.DataFrame] = []
     for group in group_columns:
         if group not in frame.columns:
             record.warn(f"grouping column {group!r} absent; skipped")

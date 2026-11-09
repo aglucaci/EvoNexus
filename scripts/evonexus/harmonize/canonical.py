@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -31,7 +31,7 @@ UNKNOWN = "unknown"
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
-def _to_missing(series: pd.Series, tokens: List[str]) -> pd.Series:
+def _to_missing(series: pd.Series, tokens: list[str]) -> pd.Series:
     token_set = {str(t).strip().lower() for t in tokens}
     out = series.copy()
     if out.dtype == object or pd.api.types.is_string_dtype(out):
@@ -41,15 +41,18 @@ def _to_missing(series: pd.Series, tokens: List[str]) -> pd.Series:
 
 
 def _load_entity(mapping: ResolvedMapping, entity: str,
-                 raw_dir: Path) -> Tuple[pd.DataFrame | None, pd.DataFrame]:
-    """Return (mapped dataframe, crosswalk rows) for one canonical entity."""
+                 raw_dir: Path) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
+    """Return (mapped dataframe, unmodified source dataframe) for one entity.
+
+    The source frame is returned explicitly rather than carried on
+    ``DataFrame.attrs``: pandas compares ``attrs`` dictionaries during
+    ``concat``, and a DataFrame stored there raises on its ambiguous truth
+    value. Some columns (the effective-depth denominator) are read from the
+    source frame rather than the mapped one, so the caller needs both.
+    """
     res = mapping.entities.get(entity)
-    crosswalk = pd.DataFrame(
-        columns=["entity", "source_id", "canonical_id", "source_table",
-                 "source_column", "evidence", "provenance"]
-    )
     if res is None or res.source_path is None:
-        return None, crosswalk
+        return None, None
 
     # The inventory may record an absolute path, a path relative to the
     # current directory, or a path relative to the raw-data root. Try them in
@@ -68,14 +71,10 @@ def _load_entity(mapping: ResolvedMapping, entity: str,
     kept = raw[[c for c in colmap if c in raw.columns]].rename(columns=colmap)
     for col in kept.columns:
         kept[col] = _to_missing(kept[col], mapping.missing_tokens)
-    kept.attrs["source_table"] = res.source_table
-    kept.attrs["source_path"] = str(path)
-    kept.attrs["raw"] = raw
-    kept.attrs["colmap"] = colmap
-    return kept, crosswalk
+    return kept, raw
 
 
-def _vocab_map(value: Any, vocab: Dict[str, List[str]], default: str = UNKNOWN) -> str:
+def _vocab_map(value: Any, vocab: dict[str, list[str]], default: str = UNKNOWN) -> str:
     if value is None or (isinstance(value, float) and np.isnan(value)):
         return default
     text = str(value).strip().lower()
@@ -93,7 +92,7 @@ def _vocab_map(value: Any, vocab: Dict[str, List[str]], default: str = UNKNOWN) 
     return default
 
 
-def _as_bool(value: Any, vocabularies: Dict[str, Any]) -> bool | None:
+def _as_bool(value: Any, vocabularies: dict[str, Any]) -> bool | None:
     if value is None or (isinstance(value, float) and np.isnan(value)):
         return None
     text = str(value).strip().lower()
@@ -199,7 +198,7 @@ def _build_hosts(df: pd.DataFrame | None, mapping: ResolvedMapping) -> pd.DataFr
 
 
 def _effective_depth(raw: pd.DataFrame, read_depth: pd.Series,
-                     filters: Dict[str, Any]) -> Tuple[pd.Series, str]:
+                     filters: dict[str, Any]) -> tuple[pd.Series, str]:
     """Pick one depth denominator and use it for every library."""
     spec = filters.get("effective_depth", {}) or {}
     primary = str(spec.get("definition", "non_host_non_rrna_reads"))
@@ -214,15 +213,15 @@ def _effective_depth(raw: pd.DataFrame, read_depth: pd.Series,
     return read_depth.astype(float), "read_depth_fallback"
 
 
-def _build_libraries(df: pd.DataFrame | None, mapping: ResolvedMapping,
-                     filters: Dict[str, Any]) -> pd.DataFrame:
+def _build_libraries(df: pd.DataFrame | None, raw: pd.DataFrame | None,
+                     mapping: ResolvedMapping, filters: dict[str, Any]) -> pd.DataFrame:
     cols = ["library_id", "host_id", "site_id", "tissue", "tissue_group",
             "read_depth", "effective_depth", "effective_depth_definition",
             "sequencing_batch", "sra_run", "bioproject", "collection_date",
             "collection_time_numeric", "screened_panel", "is_negative_control"]
     if df is None or df.empty:
         return pd.DataFrame(columns=cols)
-    raw = df.attrs.get("raw", df)
+    raw = raw if raw is not None else df
     out = pd.DataFrame(index=df.index)
     out["library_id"] = df.get("library_id").astype(str)
     out["host_id"] = df.get("host_id").astype(str) if "host_id" in df else None
@@ -266,7 +265,7 @@ def _build_libraries(df: pd.DataFrame | None, mapping: ResolvedMapping,
     return out[cols]
 
 
-def _build_viruses(df: pd.DataFrame | None, filters: Dict[str, Any]) -> pd.DataFrame:
+def _build_viruses(df: pd.DataFrame | None, filters: dict[str, Any]) -> pd.DataFrame:
     cols = ["virus_id", "virus_family", "virus_name", "classification_evidence",
             "representative_accession", "mammal_associated", "eligible",
             "eligibility_reason"]
@@ -326,9 +325,9 @@ def _build_detections(
     observed: pd.DataFrame | None,
     libraries: pd.DataFrame,
     viruses: pd.DataFrame,
-    filters: Dict[str, Any],
+    filters: dict[str, Any],
     not_screened: pd.DataFrame | None = None,
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Expand observed rows into a full library x lineage grid with states.
 
     The grid is the whole point: a model needs the zeros, but only the zeros
@@ -336,7 +335,7 @@ def _build_detections(
     """
     cols = ["library_id", "virus_id", "detection", "y", "mapped_reads",
             "coverage_breadth", "abundance", "evidence", "flag"]
-    diagnostics: Dict[str, Any] = {}
+    diagnostics: dict[str, Any] = {}
     if libraries.empty or viruses.empty:
         return pd.DataFrame(columns=cols), {"reason": "no libraries or no viruses"}
 
@@ -435,13 +434,13 @@ def _build_detections(
 
     diagnostics = {
         "common_reference_panel": common_panel,
-        "n_cells": int(len(df)),
+        "n_cells": len(df),
         "n_positive": int((df["detection"] == "positive").sum()),
         "n_negative": int((df["detection"] == "negative").sum()),
         "n_unassessable": int((df["detection"] == "unassessable").sum()),
         "n_libraries_not_screened": int((~lib_screened).sum()),
         "n_explicit_not_screened_cells": int(df["explicitly_not_screened"].sum()),
-        "observed_rows_supplied": int(len(obs)),
+        "observed_rows_supplied": len(obs),
         "detection_rule": {
             "min_mapped_reads": min_reads,
             "min_coverage_breadth": min_breadth,
@@ -454,9 +453,9 @@ def _build_detections(
 
 
 def _apply_contamination_filters(detections: pd.DataFrame, libraries: pd.DataFrame,
-                                 filters: Dict[str, Any]) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+                                 filters: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any]]:
     rules = filters.get("contamination", {}) or {}
-    diag: Dict[str, Any] = {}
+    diag: dict[str, Any] = {}
     if detections.empty:
         return detections, diag
     df = detections.copy()
@@ -507,18 +506,20 @@ def _apply_contamination_filters(detections: pd.DataFrame, libraries: pd.DataFra
 # entry point
 # ---------------------------------------------------------------------------
 def build_canonical(raw_dir: str | Path, mapping: ResolvedMapping,
-                    filters: Dict[str, Any]) -> Dict[str, Any]:
+                    filters: dict[str, Any]) -> dict[str, Any]:
     """Build every canonical table plus a harmonization diagnostics record."""
     root = Path(raw_dir)
-    loaded: Dict[str, pd.DataFrame | None] = {}
-    crosswalk_parts: List[pd.DataFrame] = []
+    loaded: dict[str, pd.DataFrame | None] = {}
+    sources: dict[str, pd.DataFrame | None] = {}
+    crosswalk_parts: list[pd.DataFrame] = []
     for entity in ("sites", "hosts", "libraries", "viruses", "detections", "ecology"):
-        df, _ = _load_entity(mapping, entity, root)
+        df, raw = _load_entity(mapping, entity, root)
         loaded[entity] = df
+        sources[entity] = raw
 
     sites = _build_sites(loaded["sites"], mapping)
     hosts = _build_hosts(loaded["hosts"], mapping)
-    libraries = _build_libraries(loaded["libraries"], mapping, filters)
+    libraries = _build_libraries(loaded["libraries"], sources["libraries"], mapping, filters)
     viruses = _build_viruses(loaded["viruses"], filters)
     ecology = _build_ecology(loaded["ecology"])
 
@@ -586,14 +587,14 @@ def build_canonical(raw_dir: str | Path, mapping: ResolvedMapping,
         "detections": det_diag,
         "contamination": contam_diag,
         "counts": {
-            "sites": int(len(sites)),
-            "hosts": int(len(hosts)),
-            "libraries": int(len(libraries)),
-            "viruses": int(len(viruses)),
+            "sites": len(sites),
+            "hosts": len(hosts),
+            "libraries": len(libraries),
+            "viruses": len(viruses),
             "viruses_eligible": int(viruses["eligible"].sum()) if "eligible" in viruses and len(viruses) else 0,
-            "detections_cells": int(len(detections)),
-            "ecology_sites": int(len(ecology)),
-            "crosswalk_rows": int(len(crosswalk)),
+            "detections_cells": len(detections),
+            "ecology_sites": len(ecology),
+            "crosswalk_rows": len(crosswalk),
         },
         "habitat_distribution": (
             sites["habitat"].value_counts().to_dict() if "habitat" in sites and len(sites) else {}

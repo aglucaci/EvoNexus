@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pandas as pd
 
@@ -15,9 +15,9 @@ from evonexus.qc.gates import GateReport, evaluate_gates
 TABLE_NAMES = ("sites", "hosts", "libraries", "viruses", "detections", "ecology", "crosswalk")
 
 
-def load_canonical(processed_dir: str | Path) -> Dict[str, pd.DataFrame]:
+def load_canonical(processed_dir: str | Path) -> dict[str, pd.DataFrame]:
     base = Path(processed_dir)
-    tables: Dict[str, pd.DataFrame] = {}
+    tables: dict[str, pd.DataFrame] = {}
     for name in TABLE_NAMES:
         try:
             tables[name] = read_table(base / name)
@@ -26,7 +26,7 @@ def load_canonical(processed_dir: str | Path) -> Dict[str, pd.DataFrame]:
     return tables
 
 
-def _exclusion_waterfall(tables: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+def _exclusion_waterfall(tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
     """How many observations survive each eligibility rule, in order."""
     lib, hosts, sites, vir, det = (
         tables["libraries"], tables["hosts"], tables["sites"], tables["viruses"], tables["detections"]
@@ -70,7 +70,7 @@ def _exclusion_waterfall(tables: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _render_report(report: GateReport, tables: Dict[str, pd.DataFrame],
+def _render_report(report: GateReport, tables: dict[str, pd.DataFrame],
                    waterfall: pd.DataFrame, synthetic: bool) -> str:
     lines = ["# EvoNexus QC report", ""]
     if synthetic:
@@ -150,7 +150,7 @@ def run_qc(
     gates_config: str = "qc_gates",
     synthetic: bool = False,
     fail_on_critical: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     record = RunRecord(step="qc", params={"gates_config": gates_config, "synthetic": synthetic})

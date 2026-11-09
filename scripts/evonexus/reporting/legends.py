@@ -9,16 +9,15 @@ says so and states nothing further.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
-
+from typing import Any
 
 from evonexus.core.io import write_text
 from evonexus.reporting.artifacts import ArtifactStore
 
 
-def _observations(store: ArtifactStore, figure: str) -> List[str]:
+def _observations(store: ArtifactStore, figure: str) -> list[str]:
     """The honest denominator for each figure."""
-    lines: List[str] = []
+    lines: list[str] = []
     meta = store.matrix_metadata() or {}
     summary = meta.get("summary", {})
     libs = store.canonical("libraries")
@@ -90,8 +89,8 @@ def _observations(store: ArtifactStore, figure: str) -> List[str]:
     return lines
 
 
-def _statistics(store: ArtifactStore, figure: str) -> List[str]:
-    lines: List[str] = []
+def _statistics(store: ArtifactStore, figure: str) -> list[str]:
+    lines: list[str] = []
     status = store.bayesian_status() or {}
     engine = status.get("engine")
     engine_text = {
@@ -155,18 +154,18 @@ def _statistics(store: ArtifactStore, figure: str) -> List[str]:
     return lines
 
 
-def build_legends(store: ArtifactStore, config: Dict[str, Any],
-                  figure_results: Dict[str, Any], out_dir: str | Path) -> Dict[str, Any]:
+def build_legends(store: ArtifactStore, config: dict[str, Any],
+                  figure_results: dict[str, Any], out_dir: str | Path) -> dict[str, Any]:
     out = Path(out_dir) / "figure_legends"
     template = config.get("legend_template", {}) or {}
     boilerplate = template.get("caveat_boilerplate", []) or []
     synthetic = store.is_synthetic()
-    written: Dict[str, Any] = {}
+    written: dict[str, Any] = {}
 
     for name, spec in (config.get("figures") or {}).items():
         result = figure_results.get(name, {})
         status = result.get("status", "not_generated")
-        lines: List[str] = [f"# {name} legend", ""]
+        lines: list[str] = [f"# {name} legend", ""]
 
         if synthetic:
             lines += ["> **SYNTHETIC DATA — software validation only. "

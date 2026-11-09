@@ -13,9 +13,10 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
 import pandas as pd
 
@@ -64,7 +65,7 @@ class HttpClient:
     def get_text(self, url: str) -> str:
         return self._request(url).decode("utf-8", errors="replace")
 
-    def download(self, url: str, dest: str | Path) -> Dict[str, Any]:
+    def download(self, url: str, dest: str | Path) -> dict[str, Any]:
         """Download ``url`` to ``dest`` and return a manifest entry."""
         target = Path(dest)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -82,7 +83,7 @@ class HttpClient:
 # Figshare
 # ---------------------------------------------------------------------------
 def figshare_file_list(client: HttpClient, article_id: int | str,
-                       api_endpoint: str | None = None) -> List[Dict[str, Any]]:
+                       api_endpoint: str | None = None) -> list[dict[str, Any]]:
     """List the files in a Figshare article without downloading them."""
     endpoint = api_endpoint or f"https://api.figshare.com/v2/articles/{article_id}"
     meta = client.get_json(endpoint)
@@ -102,7 +103,7 @@ def figshare_file_list(client: HttpClient, article_id: int | str,
 
 
 def figshare_article_metadata(client: HttpClient, article_id: int | str,
-                              api_endpoint: str | None = None) -> Dict[str, Any]:
+                              api_endpoint: str | None = None) -> dict[str, Any]:
     endpoint = api_endpoint or f"https://api.figshare.com/v2/articles/{article_id}"
     meta = client.get_json(endpoint)
     return {
@@ -153,7 +154,7 @@ def genbank_fetch(client: HttpClient, accessions: Iterable[str],
                   batch_size: int = 200, rettype: str = "fasta") -> str:
     """Fetch sequence records for a list of accessions, batched."""
     accs = [a.strip() for a in accessions if a and a.strip()]
-    chunks: List[str] = []
+    chunks: list[str] = []
     for i in range(0, len(accs), batch_size):
         batch = accs[i : i + batch_size]
         url = (
@@ -165,7 +166,7 @@ def genbank_fetch(client: HttpClient, accessions: Iterable[str],
     return "\n".join(chunks)
 
 
-def genbank_search(client: HttpClient, query: str, retmax: int = 500) -> List[str]:
+def genbank_search(client: HttpClient, query: str, retmax: int = 500) -> list[str]:
     url = (
         f"{EUTILS}/esearch.fcgi?db=nuccore&term={urllib.parse.quote(query)}"
         f"&retmax={retmax}&retmode=json"

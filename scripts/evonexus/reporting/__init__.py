@@ -2,9 +2,9 @@
 
 from evonexus.reporting.artifacts import ArtifactStore
 from evonexus.reporting.figures import build_figures
-from evonexus.reporting.tables import build_tables
 from evonexus.reporting.legends import build_legends
 from evonexus.reporting.run import run_reporting
+from evonexus.reporting.tables import build_tables
 
 __all__ = [
     "ArtifactStore",

@@ -6,8 +6,9 @@ report as "not generated", with the reason.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -15,7 +16,7 @@ import pandas as pd
 from evonexus.core.io import write_table, write_text
 from evonexus.reporting.artifacts import ArtifactStore
 
-Result = Tuple[pd.DataFrame | None, str]
+Result = tuple[pd.DataFrame | None, str]
 
 
 def _fmt(value: Any, digits: int = 3) -> str:
@@ -59,12 +60,12 @@ def table1(store: ArtifactStore) -> Result:
     if eco is not None and len(eco):
         merged = merged.merge(eco, on="site_id", how="left")
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for habitat, group in merged.groupby(merged["habitat"].fillna("unknown")):
         depth = pd.to_numeric(group["effective_depth"], errors="coerce")
         row = {
             "habitat": habitat,
-            "n_libraries": int(len(group)),
+            "n_libraries": len(group),
             "n_sites": int(group["site_id"].nunique()),
             "n_source_pools": int(group["host_id"].nunique()),
             "n_host_species": int(
@@ -87,7 +88,7 @@ def table1(store: ArtifactStore) -> Result:
 
     total = {
         "habitat": "all",
-        "n_libraries": int(len(merged)),
+        "n_libraries": len(merged),
         "n_sites": int(merged["site_id"].nunique()),
         "n_source_pools": int(merged["host_id"].nunique()),
         "n_host_species": int(
@@ -136,7 +137,7 @@ def table4(store: ArtifactStore) -> Result:
     folds = store.cv_folds()
     if comparison is None and folds is None:
         return None, "neither model comparison nor cross-validation is available"
-    frames: List[pd.DataFrame] = []
+    frames: list[pd.DataFrame] = []
     if comparison is not None and len(comparison):
         comp = comparison.copy()
         comp["section"] = "in-sample model comparison (LOO)"
@@ -159,7 +160,7 @@ def table_s1(store: ArtifactStore) -> Result:
     waterfall = store.waterfall()
     if manifest is None and qc is None:
         return None, "acquisition manifest and QC report are both unavailable"
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for source in (manifest or {}).get("sources", []):
         rows.append(
             {
@@ -199,7 +200,7 @@ def table_s2(store: ArtifactStore) -> Result:
     recovery = store.parameter_recovery()
     if prior is None and recovery is None:
         return None, "prior predictive check and parameter recovery are both unavailable"
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     if prior:
         for q, v in (prior.get("detection_rate_quantiles") or {}).items():
             rows.append({"section": "prior predictive", "item": f"detection rate {q}",
@@ -228,7 +229,7 @@ def table_s3(store: ArtifactStore) -> Result:
     status = store.bayesian_status()
     if not status:
         return None, "no Bayesian run metadata"
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for model in status.get("models_fitted", []):
         conv = store.convergence(model) or {}
         metrics = conv.get("metrics", {})
@@ -301,7 +302,7 @@ def table_s5(store: ArtifactStore) -> Result:
     return pd.concat(frames, ignore_index=True), "ok"
 
 
-BUILDERS: Dict[str, Callable[[ArtifactStore], Result]] = {
+BUILDERS: dict[str, Callable[[ArtifactStore], Result]] = {
     "Table1": table1,
     "Table2": table2,
     "Table3": table3,
@@ -314,12 +315,12 @@ BUILDERS: Dict[str, Callable[[ArtifactStore], Result]] = {
 }
 
 
-def build_tables(store: ArtifactStore, config: Dict[str, Any],
-                 out_dir: str | Path) -> Dict[str, Any]:
+def build_tables(store: ArtifactStore, config: dict[str, Any],
+                 out_dir: str | Path) -> dict[str, Any]:
     out = Path(out_dir)
     data_dir = out / "tables"
     md_dir = out / "manuscript"
-    results: Dict[str, Any] = {}
+    results: dict[str, Any] = {}
     synthetic = store.is_synthetic()
 
     for name, spec in (config.get("tables") or {}).items():
@@ -348,6 +349,6 @@ def build_tables(store: ArtifactStore, config: Dict[str, Any],
             f"_Rows: {len(df)}. Data file: `{Path(path).name}`._\n",
             md_dir / f"{name}.md",
         )
-        results[name] = {"status": "ok", "title": title, "rows": int(len(df)),
+        results[name] = {"status": "ok", "title": title, "rows": len(df),
                          "path": str(path)}
     return results

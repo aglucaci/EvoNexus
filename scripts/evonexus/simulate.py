@@ -15,7 +15,7 @@ present synthetic results as empirical ones and watermarks every figure.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -59,7 +59,7 @@ def simulate(
     seed: int = 20250101,
     unassessable_fraction: float = 0.08,
     mixed_pool_fraction: float = 0.10,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Write source-like synthetic tables plus the generating truth."""
     rng = np.random.default_rng(seed)
     out = Path(out_dir)
@@ -151,7 +151,7 @@ def simulate(
     )
 
     # ---------------- generating parameters ----------------------------
-    truth: Dict[str, Any] = {
+    truth: dict[str, Any] = {
         "alpha": -3.4,
         "beta_habitat": 0.55,          # the estimand the pipeline must recover
         "gamma_depth": 0.45,
@@ -267,8 +267,8 @@ def simulate(
             "n_libraries": n_libraries,
             "n_viruses": n_viruses,
             "n_host_species": len(HOST_SPECIES),
-            "n_cells_written": int(len(detections)),
-            "n_cells_not_screened": int(len(not_screened)),
+            "n_cells_written": len(detections),
+            "n_cells_not_screened": len(not_screened),
             "n_mixed_species_pools": int(mixed.sum()),
         },
         "parameters": truth,

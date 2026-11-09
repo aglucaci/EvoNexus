@@ -13,7 +13,8 @@ data being predicted. That is what makes held-out-site prediction honest.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -41,17 +42,17 @@ class PosteriorPredictor:
             np.asarray(sigma, dtype=float).reshape(-1, np.asarray(sigma).shape[-1])
             if sigma is not None and np.asarray(sigma).size else None
         )
-        self.sigma_names: List[str] = list(posterior.get("sigma_names") or [])
+        self.sigma_names: list[str] = list(posterior.get("sigma_names") or [])
 
         self.spans = [tuple(s) for s in posterior.get("spans", [])]
-        self.fixed_names: List[str] = list(posterior.get("fixed_names") or [])
+        self.fixed_names: list[str] = list(posterior.get("fixed_names") or [])
         self.has_intercept = bool(posterior.get("has_intercept", True))
         blocks = posterior.get("blocks") or {}
-        self.block_levels: Dict[str, List[str]] = {
+        self.block_levels: dict[str, list[str]] = {
             name: list(spec["levels"]) for name, spec in blocks.items()
         }
-        self.block_span: Dict[str, tuple[int, int]] = {}
-        self.fixed_span: Dict[str, tuple[int, int]] = {}
+        self.block_span: dict[str, tuple[int, int]] = {}
+        self.fixed_span: dict[str, tuple[int, int]] = {}
         self.intercept_span: tuple[int, int] | None = None
         for label, start, stop in self.spans:
             if label == "intercept":
@@ -66,8 +67,8 @@ class PosteriorPredictor:
     def intercept(self) -> np.ndarray:
         if not self.has_intercept or self.intercept_span is None:
             return np.zeros(self.n_samples)
-        s, e = self.intercept_span
-        return self.beta[:, s]
+        start, _stop = self.intercept_span
+        return self.beta[:, start]
 
     def fixed(self, name: str) -> np.ndarray:
         span = self.fixed_span.get(name)

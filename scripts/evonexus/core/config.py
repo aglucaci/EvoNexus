@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import copy
 import os
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any
 
 import yaml
 
@@ -18,7 +19,7 @@ def config_dir() -> Path:
     return Path(os.environ.get(CONFIG_DIR_ENV, _DEFAULT_CONFIG_DIR))
 
 
-def load_yaml(path: str | Path) -> Dict[str, Any]:
+def load_yaml(path: str | Path) -> dict[str, Any]:
     """Load a YAML document, returning ``{}`` for an empty file."""
     p = Path(path)
     if not p.exists():
@@ -28,7 +29,7 @@ def load_yaml(path: str | Path) -> Dict[str, Any]:
     return data or {}
 
 
-def load_config(name: str) -> Dict[str, Any]:
+def load_config(name: str) -> dict[str, Any]:
     """Load a named configuration file from the configuration directory.
 
     ``name`` may be given with or without the ``.yaml`` suffix, or as an
@@ -41,9 +42,9 @@ def load_config(name: str) -> Dict[str, Any]:
     return load_yaml(config_dir() / f"{stem}.yaml")
 
 
-def deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> Dict[str, Any]:
+def deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
     """Recursively merge ``override`` into ``base`` without mutating either."""
-    out: Dict[str, Any] = copy.deepcopy(dict(base))
+    out: dict[str, Any] = copy.deepcopy(dict(base))
     for key, value in override.items():
         if key in out and isinstance(out[key], Mapping) and isinstance(value, Mapping):
             out[key] = deep_merge(out[key], value)
@@ -52,7 +53,7 @@ def deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> Dict[str
     return out
 
 
-def resolve_variant(config: Mapping[str, Any], variant: str) -> Dict[str, Any]:
+def resolve_variant(config: Mapping[str, Any], variant: str) -> dict[str, Any]:
     """Resolve a named variant from a ``variants:`` block.
 
     A variant may declare ``inherits: <other>`` plus an ``overrides:`` mapping.
@@ -71,7 +72,7 @@ def resolve_variant(config: Mapping[str, Any], variant: str) -> Dict[str, Any]:
         chain.append(cursor)
         cursor = (variants.get(cursor) or {}).get("inherits")
 
-    resolved: Dict[str, Any] = {}
+    resolved: dict[str, Any] = {}
     for name in reversed(chain):
         spec = dict(variants.get(name) or {})
         spec.pop("inherits", None)

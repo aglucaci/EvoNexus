@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from evonexus.core.config import load_config
 from evonexus.core.io import write_json, write_text
@@ -14,8 +14,8 @@ from evonexus.reporting.legends import build_legends
 from evonexus.reporting.tables import build_tables
 
 
-def _provenance_report(store: ArtifactStore, figures: Dict[str, Any],
-                       tables: Dict[str, Any]) -> str:
+def _provenance_report(store: ArtifactStore, figures: dict[str, Any],
+                       tables: dict[str, Any]) -> str:
     synthetic = store.is_synthetic()
     status = store.bayesian_status() or {}
     qc = store.qc() or {}
@@ -104,7 +104,7 @@ def run_reporting(
     out_dir: str | Path | None = None,
     figures_config: str = "figures",
     synthetic: bool | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     results_dir = Path(results_dir)
     out = Path(out_dir) if out_dir else results_dir
     store = ArtifactStore(results_dir)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from evonexus.bayesian.predict import expit
 from evonexus.core.io import read_json
 
 
-def _draw_prior(rng: np.random.Generator, spec: Dict[str, Any], size: int = 1) -> np.ndarray:
+def _draw_prior(rng: np.random.Generator, spec: dict[str, Any], size: int = 1) -> np.ndarray:
     kind = str(spec.get("dist", "normal")).lower()
     if kind == "normal":
         return rng.normal(float(spec.get("mu", 0.0)), float(spec.get("sigma", 1.0)), size)
@@ -29,11 +29,11 @@ def _draw_prior(rng: np.random.Generator, spec: Dict[str, Any], size: int = 1) -
 
 def prior_predictive_check(
     design: ModelDesign,
-    priors: Dict[str, Any],
+    priors: dict[str, Any],
     draws: int = 1000,
     seed: int = 20250101,
     plausible_band: tuple[float, float] = (0.0005, 0.35),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Simulate detections under the priors alone and judge plausibility.
 
     Priors that imply, say, a 90% chance that every library carries every
@@ -41,8 +41,8 @@ def prior_predictive_check(
     that is noticed before any data is used.
     """
     rng = np.random.default_rng(seed)
-    X, names, spans = design_matrix(design)
-    n, p = X.shape
+    X, _names, spans = design_matrix(design)
+    _n, p = X.shape
     rates = np.empty(draws)
     per_draw_eta_sd = np.empty(draws)
 
@@ -71,7 +71,7 @@ def prior_predictive_check(
     lo, hi = plausible_band
     inside = float(np.mean((rates >= lo) & (rates <= hi)))
     q = np.quantile(rates, [0.005, 0.025, 0.25, 0.5, 0.75, 0.975, 0.995])
-    warnings: List[str] = []
+    warnings: list[str] = []
     if inside < 0.5:
         warnings.append(
             f"only {inside:.0%} of prior predictive detection rates fall inside the "
@@ -115,10 +115,10 @@ _RECOVERY_MAP = {
 
 
 def parameter_recovery(
-    posterior: Dict[str, Any],
+    posterior: dict[str, Any],
     truth_path: str | Path,
     hdi_prob: float = 0.95,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Compare posterior intervals with the parameters that generated the data.
 
     Only meaningful for synthetic data. The result is explicitly marked as
@@ -133,7 +133,7 @@ def parameter_recovery(
     truth = truth_doc.get("parameters", {})
     predictor = PosteriorPredictor(posterior)
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for name, value in truth.items():
         target = _RECOVERY_MAP.get(name)
         if target is None:
@@ -171,7 +171,7 @@ def parameter_recovery(
         "synthetic": True,
         "table": table,
         "coverage": coverage,
-        "n_parameters_checked": int(len(table)),
+        "n_parameters_checked": len(table),
         "hdi_prob": hdi_prob,
         "note": (
             "Parameter recovery on SYNTHETIC data. It validates the software, "

@@ -143,6 +143,22 @@ def test_crosswalk_records_source_provenance(tables):
     assert cw["source_table"].notna().any()
 
 
+def test_canonical_tables_survive_concat(tables):
+    """Regression: a DataFrame hidden in `.attrs` broke pandas concat.
+
+    `pd.concat` compares the `attrs` of its inputs, and a DataFrame stored
+    there raises on its ambiguous truth value. The source frame is now passed
+    explicitly instead. This only surfaced with pyarrow installed, so it was
+    invisible in a CSV-fallback environment.
+    """
+    for name, df in tables.items():
+        if not len(df):
+            continue
+        assert df.attrs == {}, f"{name} carries unexpected DataFrame.attrs"
+        doubled = pd.concat([df, df], ignore_index=True)
+        assert len(doubled) == 2 * len(df)
+
+
 def test_effective_depth_definition_is_uniform(tables):
     libs = tables["libraries"]
     assert libs["effective_depth_definition"].nunique() == 1

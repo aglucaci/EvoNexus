@@ -27,7 +27,7 @@ environment, a diet, a laboratory batch, or simply a common viral family.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ CONNECTIVITY_CAVEAT = (
 )
 
 
-def _canonical_profile(frame: pd.DataFrame) -> Dict[str, Any]:
+def _canonical_profile(frame: pd.DataFrame) -> dict[str, Any]:
     """One standard library profile that every host is predicted at."""
     tissue = (
         frame["tissue_group"].mode().iat[0] if "tissue_group" in frame and len(frame) else "unknown"
@@ -62,13 +62,13 @@ def _canonical_profile(frame: pd.DataFrame) -> Dict[str, Any]:
 
 
 def host_lineage_probabilities(
-    posterior: Dict[str, Any],
+    posterior: dict[str, Any],
     frame: pd.DataFrame,
     habitat: str = "settlement",
-    hosts: List[str] | None = None,
+    hosts: list[str] | None = None,
     seed: int = 20250101,
     drop_interaction: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Posterior draws of p[host, lineage] for a common sampling design.
 
     With ``drop_interaction=True`` the host-by-family term is set to zero,
@@ -121,11 +121,11 @@ def connectivity_matrix(p: np.ndarray) -> np.ndarray:
     return np.einsum("siv,sjv->sij", p, p)
 
 
-def summarize_connectivity(C: np.ndarray, hosts: List[str], habitat: str,
+def summarize_connectivity(C: np.ndarray, hosts: list[str], habitat: str,
                            hdi_prob: float = 0.95) -> pd.DataFrame:
     from evonexus.bayesian.diagnostics import hdi
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     n = len(hosts)
     for i in range(n):
         for j in range(i, n):
@@ -147,11 +147,11 @@ def summarize_connectivity(C: np.ndarray, hosts: List[str], habitat: str,
 
 
 def marginal_null(
-    posterior: Dict[str, Any],
+    posterior: dict[str, Any],
     frame: pd.DataFrame,
     habitat: str = "settlement",
     seed: int = 20250101,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Null in which host-by-family structure is removed, sampling preserved."""
     pred = host_lineage_probabilities(posterior, frame, habitat=habitat, seed=seed,
                                       drop_interaction=True)
@@ -168,7 +168,7 @@ def permutation_null(
     n_permutations: int = 500,
     seed: int = 20250101,
     strata: tuple[str, ...] = ("habitat", "site_id"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Observed co-detection under permuted host labels within strata.
 
     Host species labels are shuffled among libraries *within* habitat and site,
@@ -224,7 +224,7 @@ def permutation_null(
         z = np.where(sd_null > 0, (observed - mean_null) / sd_null, np.nan)
     p_upper = (null_draws >= observed[None, :, :]).mean(axis=0)
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for i, hi in enumerate(hosts):
         for j, hj in enumerate(hosts):
             if j < i:
@@ -254,8 +254,8 @@ def permutation_null(
 
 
 def connectivity_vs_phylogeny(
-    C: np.ndarray, hosts: List[str], distances: Dict[str, Any] | None
-) -> Dict[str, Any]:
+    C: np.ndarray, hosts: list[str], distances: dict[str, Any] | None
+) -> dict[str, Any]:
     """Association between expected co-detection and host phylogenetic distance."""
     if not distances:
         return {"status": "unavailable",
@@ -293,7 +293,7 @@ def connectivity_vs_phylogeny(
     return {
         "status": "ok",
         "n_host_species": len(usable),
-        "n_pairs": int(len(dist_vec)),
+        "n_pairs": len(dist_vec),
         "slope_mean": float(np.mean(slopes)),
         "slope_hdi_low": lo,
         "slope_hdi_high": hi,
@@ -320,7 +320,7 @@ def run_connectivity(
     seed: int = 20250101,
     host_distance_path: str | Path | None = None,
     synthetic: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     from evonexus.bayesian.fit import load_posterior
 
     out = Path(out_dir)
@@ -341,10 +341,10 @@ def run_connectivity(
     if host_distance_path and Path(host_distance_path).exists():
         distances = read_json(host_distance_path)
 
-    summaries: List[pd.DataFrame] = []
-    null_summaries: List[pd.DataFrame] = []
-    phylo: Dict[str, Any] = {}
-    matrices: Dict[str, Any] = {}
+    summaries: list[pd.DataFrame] = []
+    null_summaries: list[pd.DataFrame] = []
+    phylo: dict[str, Any] = {}
+    matrices: dict[str, Any] = {}
 
     for habitat in habitats:
         pred = host_lineage_probabilities(posterior, frame, habitat=habitat, seed=seed)

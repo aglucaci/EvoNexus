@@ -1,0 +1,47 @@
+# Lint configuration, pinned explicitly.
+#
+# Without this file the enabled rule set is whatever the installed ruff
+# version happens to default to, which means a new ruff release can fail CI
+# on code that has not changed. Everything checked here is chosen on purpose.
+
+target-version = "py311"
+line-length = 100
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # import sorting
+    "UP",   # pyupgrade — modern syntax for the target version
+    "RUF",  # ruff-specific checks
+]
+ignore = [
+    # Long lines are tolerated: several modules document statistical
+    # definitions in prose and tables that read worse when wrapped.
+    "E501",
+    # Blind `except Exception` is deliberate in a few places — a failing QC
+    # gate, a broken figure panel or an unparsable source table must be
+    # reported, not allowed to abort a long pipeline run. Those handlers all
+    # record the exception type and message rather than swallowing it.
+    "BLE001",
+    # Ambiguous Unicode is deliberate. Figure labels, legends and tables use
+    # typographic characters on purpose: U+2212 MINUS SIGN in "settlement −
+    # wild", EN DASH in numeric ranges, and EM DASH for missing values. These
+    # are publication output, not identifiers.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # Concatenating a literal list with a computed one reads more clearly here
+    # than spread syntax, and the automatic rewrite collapses the formatting.
+    "RUF005",
+]
+
+[lint.per-file-ignores]
+# Package exports are grouped by subject rather than sorted alphabetically.
+"scripts/evonexus/**/__init__.py" = ["RUF022"]
+# Tests assert on values that read better as literals.
+"tests/*.py" = ["RUF015"]
+
+[lint.isort]
+known-first-party = ["evonexus"]

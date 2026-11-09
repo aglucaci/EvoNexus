@@ -7,12 +7,13 @@ habitat estimand. Gates report numbers, not opinions; the thresholds live in
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List
+from typing import Any
 
 import pandas as pd
 
-Tables = Dict[str, pd.DataFrame]
+Tables = dict[str, pd.DataFrame]
 
 
 @dataclass
@@ -22,9 +23,9 @@ class GateResult:
     condition: str
     critical: bool
     passed: bool
-    metrics: Dict[str, Any] = field(default_factory=dict)
-    failures: List[str] = field(default_factory=list)
-    notes: List[str] = field(default_factory=list)
+    metrics: dict[str, Any] = field(default_factory=dict)
+    failures: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
     @property
     def status(self) -> str:
@@ -32,7 +33,7 @@ class GateResult:
             return "pass"
         return "fail" if self.critical else "warn"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "gate_id": self.gate_id,
             "name": self.name,
@@ -48,22 +49,22 @@ class GateResult:
 
 @dataclass
 class GateReport:
-    results: List[GateResult]
-    on_critical_failure: Dict[str, Any] = field(default_factory=dict)
+    results: list[GateResult]
+    on_critical_failure: dict[str, Any] = field(default_factory=dict)
 
     @property
-    def critical_failures(self) -> List[GateResult]:
+    def critical_failures(self) -> list[GateResult]:
         return [r for r in self.results if r.critical and not r.passed]
 
     @property
-    def warnings(self) -> List[GateResult]:
+    def warnings(self) -> list[GateResult]:
         return [r for r in self.results if not r.critical and not r.passed]
 
     @property
     def primary_model_allowed(self) -> bool:
         return not self.critical_failures
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "primary_model_allowed": self.primary_model_allowed,
             "n_critical_failures": len(self.critical_failures),
@@ -80,7 +81,7 @@ def _frac(numerator: int, denominator: int) -> float:
 # ---------------------------------------------------------------------------
 # individual gates
 # ---------------------------------------------------------------------------
-def _gate_g1(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
+def _gate_g1(t: Tables, th: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     det, lib, vir, host = t["detections"], t["libraries"], t["viruses"], t["hosts"]
     known_libs = set(lib["library_id"].astype(str)) if len(lib) else set()
     known_vir = set(vir["virus_id"].astype(str)) if len(vir) else set()
@@ -96,7 +97,7 @@ def _gate_g1(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
     host_no_site = int((~host["site_id"].astype(str).isin(known_sites)).sum()) if len(host) else 0
 
     metrics = {
-        "n_detection_cells": int(len(det)),
+        "n_detection_cells": len(det),
         "orphan_detection_cells": orphan_det,
         "orphan_detection_fraction": _frac(orphan_det, len(det)),
         "libraries_without_host": lib_no_host,
@@ -116,7 +117,7 @@ def _gate_g1(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
     return metrics, failures
 
 
-def _gate_g2(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
+def _gate_g2(t: Tables, th: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     host = t["hosts"]
     n = len(host)
     unknown_pool = int((host["pool_status"].astype(str) == "unknown").sum()) if n else 0
@@ -143,7 +144,7 @@ def _gate_g2(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
     return metrics, failures
 
 
-def _gate_g3(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
+def _gate_g3(t: Tables, th: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     det = t["detections"]
     n = len(det)
     counts = det["detection"].value_counts().to_dict() if n else {}
@@ -183,7 +184,7 @@ def _library_habitat(t: Tables) -> pd.Series:
     return lib["site_id"].astype(str).map(lookup).fillna("unknown")
 
 
-def _gate_g4(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
+def _gate_g4(t: Tables, th: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     habitat = _library_habitat(t)
     n = len(habitat)
     known = int((habitat != "unknown").sum())
@@ -219,7 +220,7 @@ def _gate_g4(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
     return metrics, failures
 
 
-def _gate_g5(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
+def _gate_g5(t: Tables, th: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     lib, hosts = t["libraries"], t["hosts"]
     habitat = _library_habitat(t)
     if not len(lib) or not len(hosts):
@@ -232,7 +233,7 @@ def _gate_g5(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
     table = pd.crosstab(frame["species"], frame["habitat"]) if len(frame) else pd.DataFrame()
 
     min_per_cell = th.get("min_libraries_per_overlapping_species_per_habitat", 2)
-    overlapping: List[str] = []
+    overlapping: list[str] = []
     if {"settlement", "wild"}.issubset(set(table.columns)):
         mask = (table["settlement"] >= min_per_cell) & (table["wild"] >= min_per_cell)
         overlapping = sorted(table.index[mask].astype(str))
@@ -260,7 +261,7 @@ def _gate_g5(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
     return metrics, failures
 
 
-def _gate_g6(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
+def _gate_g6(t: Tables, th: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     lib = t["libraries"]
     n = len(lib)
     per_host = lib.groupby("host_id").size() if n else pd.Series(dtype=int)
@@ -287,7 +288,7 @@ def _gate_g6(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
     return metrics, failures
 
 
-def _gate_g7(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
+def _gate_g7(t: Tables, th: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
     vir = t["viruses"]
     n = len(vir)
     eligible = int(vir["eligible"].fillna(False).sum()) if n else 0
@@ -321,7 +322,7 @@ def _gate_g7(t: Tables, th: Dict[str, Any]) -> tuple[Dict[str, Any], List[str]]:
     return metrics, failures
 
 
-_GATE_FUNCS: Dict[str, Callable[[Tables, Dict[str, Any]], tuple[Dict[str, Any], List[str]]]] = {
+_GATE_FUNCS: dict[str, Callable[[Tables, dict[str, Any]], tuple[dict[str, Any], list[str]]]] = {
     "G1": _gate_g1,
     "G2": _gate_g2,
     "G3": _gate_g3,
@@ -332,9 +333,9 @@ _GATE_FUNCS: Dict[str, Callable[[Tables, Dict[str, Any]], tuple[Dict[str, Any], 
 }
 
 
-def evaluate_gates(tables: Tables, config: Dict[str, Any]) -> GateReport:
+def evaluate_gates(tables: Tables, config: dict[str, Any]) -> GateReport:
     """Run every configured gate against the harmonized tables."""
-    results: List[GateResult] = []
+    results: list[GateResult] = []
     for gate_id, spec in (config.get("gates") or {}).items():
         func = _GATE_FUNCS.get(gate_id)
         if func is None:

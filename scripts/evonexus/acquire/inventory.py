@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pandas as pd
 
@@ -50,9 +50,9 @@ def _classify_kind(path: Path) -> str:
     return "other"
 
 
-def _guess_role(path: Path, columns: List[str]) -> Dict[str, Any]:
+def _guess_role(path: Path, columns: list[str]) -> dict[str, Any]:
     haystack = (path.name + " " + " ".join(columns)).lower()
-    scores: Dict[str, int] = {}
+    scores: dict[str, int] = {}
     for role, patterns in _ROLE_HINTS.items():
         scores[role] = sum(1 for pat in patterns if re.search(pat, haystack))
     best = max(scores, key=lambda k: scores[k])
@@ -64,8 +64,8 @@ def _guess_role(path: Path, columns: List[str]) -> Dict[str, Any]:
     }
 
 
-def describe_table(path: Path, preview_rows: int = 5) -> Dict[str, Any]:
-    entry: Dict[str, Any] = {"readable": False}
+def describe_table(path: Path, preview_rows: int = 5) -> dict[str, Any]:
+    entry: dict[str, Any] = {"readable": False}
     try:
         head = read_any_table(path, nrows=2000)
     except Exception as exc:
@@ -89,16 +89,16 @@ def describe_table(path: Path, preview_rows: int = 5) -> Dict[str, Any]:
 
 
 def inventory_directory(root: str | Path, checksum: bool = True,
-                        max_checksum_bytes: int = 5 * (1 << 30)) -> Dict[str, Any]:
+                        max_checksum_bytes: int = 5 * (1 << 30)) -> dict[str, Any]:
     """Walk a raw-data directory and describe everything found."""
     base = Path(root)
-    files: List[Dict[str, Any]] = []
+    files: list[dict[str, Any]] = []
     for path in sorted(base.rglob("*")):
         if not path.is_file() or path.name.startswith("."):
             continue
         kind = _classify_kind(path)
         size = path.stat().st_size
-        entry: Dict[str, Any] = {
+        entry: dict[str, Any] = {
             "path": str(path.relative_to(base)),
             "absolute_path": str(path),
             "kind": kind,
@@ -110,12 +110,12 @@ def inventory_directory(root: str | Path, checksum: bool = True,
             entry.update(describe_table(path))
         files.append(entry)
 
-    by_kind: Dict[str, int] = {}
+    by_kind: dict[str, int] = {}
     for f in files:
         by_kind[f["kind"]] = by_kind.get(f["kind"], 0) + 1
 
     tables = [f for f in files if f["kind"] == "table"]
-    roles: Dict[str, List[str]] = {}
+    roles: dict[str, list[str]] = {}
     for t in tables:
         role = (t.get("role_hint") or {}).get("guess", "unclassified")
         roles.setdefault(role, []).append(t["path"])
@@ -131,7 +131,7 @@ def inventory_directory(root: str | Path, checksum: bool = True,
     }
 
 
-def _expectations(roles: Dict[str, List[str]], by_kind: Dict[str, int]) -> Dict[str, Any]:
+def _expectations(roles: dict[str, list[str]], by_kind: dict[str, int]) -> dict[str, Any]:
     """State plainly which pipeline prerequisites the deposit appears to meet."""
     return {
         "library_level_metadata": bool(roles.get("libraries")),
@@ -154,7 +154,7 @@ def _expectations(roles: Dict[str, List[str]], by_kind: Dict[str, int]) -> Dict[
     }
 
 
-def write_inventory(inventory: Dict[str, Any], out_dir: str | Path) -> Dict[str, Path]:
+def write_inventory(inventory: dict[str, Any], out_dir: str | Path) -> dict[str, Path]:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     json_path = write_json(inventory, out / "inventory.json")

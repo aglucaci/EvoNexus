@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 
 
 class Node:
-    __slots__ = ("name", "length", "children", "parent")
+    __slots__ = ("children", "length", "name", "parent")
 
     def __init__(self, name: str = "", length: float = 0.0):
         self.name = name
         self.length = length
-        self.children: List["Node"] = []
-        self.parent: "Node" | None = None
+        self.children: list[Node] = []
+        self.parent: Node | None = None
 
     def is_leaf(self) -> bool:
         return not self.children
@@ -81,10 +81,10 @@ def parse_newick(text: str) -> Node:
     return root
 
 
-def _leaves(node: Node) -> List[Node]:
+def _leaves(node: Node) -> list[Node]:
     if node.is_leaf():
         return [node]
-    out: List[Node] = []
+    out: list[Node] = []
     for child in node.children:
         out.extend(_leaves(child))
     return out
@@ -99,7 +99,7 @@ def _root_distance(node: Node) -> float:
     return d
 
 
-def _path_to_root(node: Node) -> List[Node]:
+def _path_to_root(node: Node) -> list[Node]:
     path = [node]
     while path[-1].parent is not None:
         path.append(path[-1].parent)
@@ -108,9 +108,9 @@ def _path_to_root(node: Node) -> List[Node]:
 
 def newick_to_covariance(
     newick: str,
-    species: List[str] | None = None,
+    species: list[str] | None = None,
     scale_to_correlation: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Brownian-motion covariance: shared root-to-MRCA path length.
 
     Species names are normalized by replacing underscores with spaces, which is
@@ -161,7 +161,7 @@ def newick_to_covariance(
     }
 
 
-def covariance_from_file(path: str | Path, species: List[str] | None = None,
-                         scale_to_correlation: bool = True) -> Dict[str, Any]:
+def covariance_from_file(path: str | Path, species: list[str] | None = None,
+                         scale_to_correlation: bool = True) -> dict[str, Any]:
     text = Path(path).read_text(encoding="utf-8")
     return newick_to_covariance(text, species, scale_to_correlation)

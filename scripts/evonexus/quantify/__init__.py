@@ -2,10 +2,10 @@
 
 from evonexus.quantify.matrix import (
     RESTRICTIONS,
-    build_analysis_frame,
     apply_restriction,
-    wide_matrix,
+    build_analysis_frame,
     run_matrix,
+    wide_matrix,
 )
 
 __all__ = [

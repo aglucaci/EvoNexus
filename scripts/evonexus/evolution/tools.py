@@ -10,8 +10,9 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, Sequence
+from typing import Any
 
 
 def tool_available(name: str) -> bool:
@@ -19,7 +20,7 @@ def tool_available(name: str) -> bool:
 
 
 def _run(cmd: Sequence[str], cwd: str | Path | None = None,
-         timeout: int = 7200) -> Dict[str, Any]:
+         timeout: int = 7200) -> dict[str, Any]:
     try:
         proc = subprocess.run(
             list(cmd), capture_output=True, text=True, timeout=timeout,
@@ -39,7 +40,7 @@ def _run(cmd: Sequence[str], cwd: str | Path | None = None,
 
 
 def run_mafft(input_fasta: str | Path, output_fasta: str | Path,
-              args: Sequence[str] = ("--auto",)) -> Dict[str, Any]:
+              args: Sequence[str] = ("--auto",)) -> dict[str, Any]:
     """Align with MAFFT. MAFFT writes to stdout, so capture it and persist it."""
     if not tool_available("mafft"):
         return {"status": "tool_missing", "tool": "mafft",
@@ -59,7 +60,7 @@ def run_mafft(input_fasta: str | Path, output_fasta: str | Path,
 
 
 def run_iqtree(alignment: str | Path, prefix: str | Path, model: str = "MFP",
-               bootstrap: int = 1000, extra: Sequence[str] = ()) -> Dict[str, Any]:
+               bootstrap: int = 1000, extra: Sequence[str] = ()) -> dict[str, Any]:
     binary = "iqtree2" if tool_available("iqtree2") else ("iqtree" if tool_available("iqtree") else None)
     if binary is None:
         return {"status": "tool_missing", "tool": "iqtree2",
@@ -77,7 +78,7 @@ def run_iqtree(alignment: str | Path, prefix: str | Path, model: str = "MFP",
 
 
 def run_hyphy(method: str, alignment: str | Path, tree: str | Path,
-              output_json: str | Path, extra: Sequence[str] = ()) -> Dict[str, Any]:
+              output_json: str | Path, extra: Sequence[str] = ()) -> dict[str, Any]:
     if not tool_available("hyphy"):
         return {"status": "tool_missing", "tool": "hyphy", "method": method,
                 "remedy": "conda install -c bioconda hyphy"}
@@ -98,7 +99,7 @@ def run_hyphy(method: str, alignment: str | Path, tree: str | Path,
 
 
 def parse_hyphy_sites(json_path: str | Path, method: str,
-                      p_threshold: float = 0.05) -> Dict[str, Any]:
+                      p_threshold: float = 0.05) -> dict[str, Any]:
     """Extract a site-level summary from a HyPhy result JSON."""
     path = Path(json_path)
     if not path.exists():

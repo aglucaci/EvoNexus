@@ -8,25 +8,25 @@ watermarked across every panel.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any
 
+import matplotlib
 import numpy as np
 import pandas as pd
 
-import matplotlib
-
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.gridspec import GridSpec  # noqa: E402
+import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
 
-from evonexus.core.io import write_json, write_table  # noqa: E402
-from evonexus.reporting.artifacts import ArtifactStore  # noqa: E402
+from evonexus.core.io import write_json, write_table
+from evonexus.reporting.artifacts import ArtifactStore
 
 MM = 1 / 25.4
 
 
-def _apply_style(style: Dict[str, Any]) -> None:
+def _apply_style(style: dict[str, Any]) -> None:
     plt.rcParams.update(
         {
             "font.size": style.get("font_size_pt", 7),
@@ -43,7 +43,7 @@ def _apply_style(style: Dict[str, Any]) -> None:
     )
 
 
-def _new_figure(style: Dict[str, Any]) -> plt.Figure:
+def _new_figure(style: dict[str, Any]) -> plt.Figure:
     return plt.figure(
         figsize=(style.get("width_mm", 180) * MM, style.get("height_mm", 200) * MM)
     )
@@ -59,7 +59,7 @@ def _watermark(fig: plt.Figure, text: str) -> None:
              ha="center", va="center", rotation=30, zorder=1000)
 
 
-def _not_generated(fig: plt.Figure, title: str, missing: List[str]) -> None:
+def _not_generated(fig: plt.Figure, title: str, missing: list[str]) -> None:
     fig.clf()
     ax = fig.add_subplot(111)
     ax.axis("off")
@@ -76,9 +76,9 @@ def _not_generated(fig: plt.Figure, title: str, missing: List[str]) -> None:
             ha="center", va="center", fontsize=7, style="italic", color="#555555")
 
 
-def _save(fig: plt.Figure, out_dir: Path, name: str, style: Dict[str, Any]) -> List[str]:
+def _save(fig: plt.Figure, out_dir: Path, name: str, style: dict[str, Any]) -> list[str]:
     out_dir.mkdir(parents=True, exist_ok=True)
-    written: List[str] = []
+    written: list[str] = []
     for fmt in style.get("formats", ["pdf"]):
         path = out_dir / f"{name}.{fmt}"
         fig.savefig(path, format=fmt, dpi=style.get("dpi", 400))
@@ -90,7 +90,7 @@ def _save(fig: plt.Figure, out_dir: Path, name: str, style: Dict[str, Any]) -> L
 # ---------------------------------------------------------------------------
 # Figure 1 — sampling structure
 # ---------------------------------------------------------------------------
-def figure1(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[str, Any]:
+def figure1(store: ArtifactStore, style: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     sites = store.canonical("sites")
     libs = store.canonical("libraries")
     hosts = store.canonical("hosts")
@@ -107,7 +107,7 @@ def figure1(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
 
     palette = style.get("palette", {})
     gs = GridSpec(2, 2, figure=fig, hspace=0.45, wspace=0.35)
-    sources: Dict[str, pd.DataFrame] = {}
+    sources: dict[str, pd.DataFrame] = {}
 
     # (a) geography
     ax = fig.add_subplot(gs[0, 0])
@@ -198,7 +198,7 @@ def figure1(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
     ax.set_title("From source records to modelled cells", fontsize=7)
     sources["Figure1d_exclusions"] = wf
 
-    n_cells = int(len(frame)) if frame is not None else None
+    n_cells = len(frame) if frame is not None else None
     fig.suptitle("Figure 1 · Sampling structure of the analysed libraries", fontsize=9, y=0.98)
     if store.is_synthetic():
         _watermark(fig, style.get("synthetic_watermark", "SYNTHETIC DATA"))
@@ -208,7 +208,7 @@ def figure1(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
         "status": "ok",
         "files": _save(fig, out_dir, "Figure1", style),
         "source_tables": sources,
-        "n": {"libraries": int(len(libs)), "sites": int(len(sites)),
+        "n": {"libraries": len(libs), "sites": len(sites),
               "modelled_cells": n_cells},
     }
 
@@ -216,7 +216,7 @@ def figure1(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
 # ---------------------------------------------------------------------------
 # Figure 2 — habitat inference
 # ---------------------------------------------------------------------------
-def figure2(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[str, Any]:
+def figure2(store: ArtifactStore, style: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     contrast = store.contrast()
     draws = store.contrast_draws()
     by_family = store.contrast_by_family()
@@ -233,7 +233,7 @@ def figure2(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
 
     palette = style.get("palette", {})
     gs = GridSpec(2, 2, figure=fig, hspace=0.5, wspace=0.55)
-    sources: Dict[str, pd.DataFrame] = {}
+    sources: dict[str, pd.DataFrame] = {}
 
     # (a) raw rates
     ax = fig.add_subplot(gs[0, 0])
@@ -273,7 +273,7 @@ def figure2(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
     # (c) contrast overall and by family
     ax = fig.add_subplot(gs[1, 0])
     _panel_label(ax, "c")
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     overall = contrast[contrast["quantity"].str.contains("standardized difference")]
     if len(overall):
         r = overall.iloc[0]
@@ -339,13 +339,13 @@ def figure2(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
 
     return {"figure": "Figure2", "status": "ok",
             "files": _save(fig, out_dir, "Figure2", style), "source_tables": sources,
-            "n": {"posterior_draws": int(len(draws))}}
+            "n": {"posterior_draws": len(draws)}}
 
 
 # ---------------------------------------------------------------------------
 # Figure 3 — connectivity
 # ---------------------------------------------------------------------------
-def figure3(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[str, Any]:
+def figure3(store: ArtifactStore, style: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     conn = store.connectivity()
     meta = store.connectivity_metadata()
     perm = store.connectivity_permutation()
@@ -361,7 +361,7 @@ def figure3(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
 
     palette = style.get("palette", {})
     gs = GridSpec(2, 2, figure=fig, hspace=0.45, wspace=0.4)
-    sources: Dict[str, pd.DataFrame] = {}
+    sources: dict[str, pd.DataFrame] = {}
 
     # (a) host-virus bipartite structure
     ax = fig.add_subplot(gs[0, 0])
@@ -453,18 +453,18 @@ def figure3(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
 
     return {"figure": "Figure3", "status": "ok",
             "files": _save(fig, out_dir, "Figure3", style), "source_tables": sources,
-            "n": {"host_pairs": int(len(conn))}}
+            "n": {"host_pairs": len(conn)}}
 
 
 # ---------------------------------------------------------------------------
 # Figure 4 — evolution
 # ---------------------------------------------------------------------------
-def figure4(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[str, Any]:
+def figure4(store: ArtifactStore, style: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     selection = store.selection_results()
     lineages = store.lineage_results()
     status = store.evolution_status()
 
-    missing: List[str] = []
+    missing: list[str] = []
     if status is None or status.get("status") in {None, "not_run"}:
         missing.append("evolutionary analyses (not run)")
     if lineages is None or not len(lineages):
@@ -480,7 +480,7 @@ def figure4(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
 
     palette = style.get("palette", {})
     gs = GridSpec(2, 2, figure=fig, hspace=0.45, wspace=0.35)
-    sources: Dict[str, pd.DataFrame] = {"Figure4a_tree": lineages}
+    sources: dict[str, pd.DataFrame] = {"Figure4a_tree": lineages}
 
     ax = fig.add_subplot(gs[0, 0])
     _panel_label(ax, "a")
@@ -551,13 +551,13 @@ def figure4(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
         _watermark(fig, style.get("synthetic_watermark", "SYNTHETIC DATA"))
     return {"figure": "Figure4", "status": "ok",
             "files": _save(fig, out_dir, "Figure4", style), "source_tables": sources,
-            "n": {"lineages": int(len(lineages))}}
+            "n": {"lineages": len(lineages)}}
 
 
 # ---------------------------------------------------------------------------
 # Figure 5 — validation
 # ---------------------------------------------------------------------------
-def figure5(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[str, Any]:
+def figure5(store: ArtifactStore, style: dict[str, Any], out_dir: Path) -> dict[str, Any]:
     comparison = store.model_comparison()
     folds = store.cv_folds()
     calibration = store.calibration("site_id")
@@ -575,7 +575,7 @@ def figure5(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
 
     palette = style.get("palette", {})
     gs = GridSpec(2, 2, figure=fig, hspace=0.45, wspace=0.35)
-    sources: Dict[str, pd.DataFrame] = {}
+    sources: dict[str, pd.DataFrame] = {}
 
     ax = fig.add_subplot(gs[0, 0])
     _panel_label(ax, "a")
@@ -637,10 +637,10 @@ def figure5(store: ArtifactStore, style: Dict[str, Any], out_dir: Path) -> Dict[
         _watermark(fig, style.get("synthetic_watermark", "SYNTHETIC DATA"))
     return {"figure": "Figure5", "status": "ok",
             "files": _save(fig, out_dir, "Figure5", style), "source_tables": sources,
-            "n": {"folds": int(len(folds))}}
+            "n": {"folds": len(folds)}}
 
 
-FIGURE_BUILDERS: Dict[str, Callable[..., Dict[str, Any]]] = {
+FIGURE_BUILDERS: dict[str, Callable[..., dict[str, Any]]] = {
     "Figure1": figure1,
     "Figure2": figure2,
     "Figure3": figure3,
@@ -649,13 +649,13 @@ FIGURE_BUILDERS: Dict[str, Callable[..., Dict[str, Any]]] = {
 }
 
 
-def build_figures(store: ArtifactStore, config: Dict[str, Any],
-                  out_dir: str | Path) -> Dict[str, Any]:
+def build_figures(store: ArtifactStore, config: dict[str, Any],
+                  out_dir: str | Path) -> dict[str, Any]:
     style = config.get("style", {}) or {}
     _apply_style(style)
     figures_dir = Path(out_dir) / "figures"
     tables_dir = Path(out_dir) / "tables"
-    results: Dict[str, Any] = {}
+    results: dict[str, Any] = {}
 
     for name in (config.get("figures") or {}):
         builder = FIGURE_BUILDERS.get(name)

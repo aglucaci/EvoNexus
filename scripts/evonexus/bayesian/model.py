@@ -22,7 +22,7 @@ interaction tractable when most host x family combinations are sparse.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 
@@ -33,14 +33,14 @@ ENGINE = "pymc_nuts"
 
 def pymc_available() -> bool:
     try:
-        import pymc  # noqa: F401
         import arviz  # noqa: F401
+        import pymc  # noqa: F401
     except Exception:
         return False
     return True
 
 
-def _dist(pm, name: str, spec: Dict[str, Any], shape=None):
+def _dist(pm, name: str, spec: dict[str, Any], shape=None):
     kind = str(spec.get("dist", "normal")).lower()
     if kind == "normal":
         return pm.Normal(name, mu=float(spec.get("mu", 0.0)),
@@ -55,7 +55,7 @@ def _dist(pm, name: str, spec: Dict[str, Any], shape=None):
     raise ValueError(f"unsupported prior distribution {kind!r}")
 
 
-def build_pymc_model(design: ModelDesign, priors: Dict[str, Any]):
+def build_pymc_model(design: ModelDesign, priors: dict[str, Any]):
     """Construct the PyMC model object for a design."""
     import pymc as pm
     import pytensor.tensor as pt
@@ -101,10 +101,10 @@ def build_pymc_model(design: ModelDesign, priors: Dict[str, Any]):
     return model
 
 
-def _flatten_posterior(idata, design: ModelDesign, names: List[str]) -> np.ndarray:
+def _flatten_posterior(idata, design: ModelDesign, names: list[str]) -> np.ndarray:
     """Stack PyMC posterior variables into the design-matrix column order."""
     post = idata.posterior
-    pieces: List[np.ndarray] = []
+    pieces: list[np.ndarray] = []
 
     if design.has_intercept:
         pieces.append(np.asarray(post["intercept"])[..., None])
@@ -121,7 +121,7 @@ def _flatten_posterior(idata, design: ModelDesign, names: List[str]) -> np.ndarr
 
 def sample_pymc(
     design: ModelDesign,
-    priors: Dict[str, Any],
+    priors: dict[str, Any],
     draws: int = 1000,
     tune: int = 1000,
     chains: int = 4,
@@ -130,11 +130,11 @@ def sample_pymc(
     max_treedepth: int = 12,
     cores: int | None = None,
     store_log_lik: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Fit with NUTS and return the same dict structure as the fallback."""
     import pymc as pm
 
-    X, names, spans = design_matrix(design)
+    _X, names, spans = design_matrix(design)
     model = build_pymc_model(design, priors)
     with model:
         idata = pm.sample(
@@ -188,7 +188,7 @@ def sample_pymc(
     }
 
 
-def prior_predictive(design: ModelDesign, priors: Dict[str, Any], draws: int = 1000,
+def prior_predictive(design: ModelDesign, priors: dict[str, Any], draws: int = 1000,
                      seed: int = 20250101) -> np.ndarray:
     """Simulate detections under the priors alone (PyMC path)."""
     import pymc as pm

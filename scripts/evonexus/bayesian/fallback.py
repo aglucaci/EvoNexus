@@ -30,7 +30,7 @@ Honest limitations, recorded in the output metadata
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -60,15 +60,15 @@ def _half_normal_logpdf(x: np.ndarray | float, sigma: float) -> float:
     return float(np.sum(-0.5 * (x / sigma) ** 2 - math.log(sigma) + 0.5 * math.log(2.0 / math.pi)))
 
 
-def _fixed_prior_sd(prior: Dict[str, Any]) -> float:
+def _fixed_prior_sd(prior: dict[str, Any]) -> float:
     return float(prior.get("sigma", 1.0))
 
 
-def _fixed_prior_mu(prior: Dict[str, Any]) -> float:
+def _fixed_prior_mu(prior: dict[str, Any]) -> float:
     return float(prior.get("mu", 0.0))
 
 
-def _block_prior_scale(prior: Dict[str, Any]) -> float:
+def _block_prior_scale(prior: dict[str, Any]) -> float:
     return float(prior.get("sigma", 1.0))
 
 
@@ -139,7 +139,7 @@ def _chol_solve(precision: np.ndarray, rhs: np.ndarray, rng: np.random.Generator
 
 def sample(
     design: ModelDesign,
-    priors: Dict[str, Any],
+    priors: dict[str, Any],
     draws: int = 1000,
     tune: int = 1000,
     chains: int = 4,
@@ -147,14 +147,14 @@ def sample(
     thin: int = 1,
     store_log_lik: bool = True,
     progress_every: int = 0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run the Gibbs sampler and return posterior draws in a plain dict."""
     X, names, spans = design_matrix(design)
     y = design.y
     n, p = X.shape
     kappa = y - 0.5
 
-    block_spans: List[Tuple[str, int, int, Any]] = []
+    block_spans: list[tuple[str, int, int, Any]] = []
     fixed_mu = np.zeros(p)
     fixed_prec = np.zeros(p)
 
@@ -180,7 +180,7 @@ def sample(
     ) if n_blocks else np.zeros(0)
 
     # Precompute inverse covariances for phylogenetic blocks.
-    block_inv_cov: Dict[str, np.ndarray | None] = {}
+    block_inv_cov: dict[str, np.ndarray | None] = {}
     for name, start, stop, block in block_spans:
         if block.covariance is not None and not np.allclose(block.covariance, np.eye(block.size)):
             block_inv_cov[name] = np.linalg.inv(
@@ -189,9 +189,9 @@ def sample(
         else:
             block_inv_cov[name] = None
 
-    chain_beta: List[np.ndarray] = []
-    chain_sigma: List[np.ndarray] = []
-    chain_loglik: List[np.ndarray] = []
+    chain_beta: list[np.ndarray] = []
+    chain_sigma: list[np.ndarray] = []
+    chain_loglik: list[np.ndarray] = []
 
     kept = max(1, draws // max(1, thin))
 

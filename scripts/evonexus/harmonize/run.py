@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from evonexus.core.config import load_config
 from evonexus.core.io import read_json, write_json, write_table
@@ -23,7 +23,7 @@ def run_harmonize(
     allow_role_guess: bool = False,
     require_approval: bool = True,
     synthetic: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     record = RunRecord(
@@ -83,8 +83,8 @@ def run_harmonize(
     built = build_canonical(raw_dir, mapping, filters)
     tables = built["tables"]
 
-    schema_problems: Dict[str, Any] = {}
-    written: Dict[str, str] = {}
+    schema_problems: dict[str, Any] = {}
+    written: dict[str, str] = {}
     for name, df in tables.items():
         issues = validate_table(df, name, strict=False)
         if issues:

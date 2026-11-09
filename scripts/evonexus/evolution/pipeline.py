@@ -9,7 +9,7 @@ numbers at all rather than numbers with a caveat attached.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ from evonexus.evolution.sequences import (
 )
 
 
-def _alignment_quality(records: Dict[str, str], cfg: Dict[str, Any]) -> Dict[str, Any]:
+def _alignment_quality(records: dict[str, str], cfg: dict[str, Any]) -> dict[str, Any]:
     per_seq, per_col = gap_fractions(records)
     columns = len(next(iter(records.values()))) if records else 0
     max_seq_gap = float(cfg.get("max_gap_fraction_per_sequence", 0.5))
@@ -44,10 +44,10 @@ def _alignment_quality(records: Dict[str, str], cfg: Dict[str, Any]) -> Dict[str
     }
 
 
-def _selection_eligible(quality: Dict[str, Any], cfg: Dict[str, Any],
-                        recombination: Dict[str, Any]) -> tuple[bool, List[str]]:
+def _selection_eligible(quality: dict[str, Any], cfg: dict[str, Any],
+                        recombination: dict[str, Any]) -> tuple[bool, list[str]]:
     rules = cfg.get("eligibility", {}) or {}
-    reasons: List[str] = []
+    reasons: list[str] = []
     if quality["n_sequences"] < int(rules.get("min_sequences", 10)):
         reasons.append(
             f"{quality['n_sequences']} sequences (minimum {rules.get('min_sequences', 10)})"
@@ -86,7 +86,7 @@ def run_evolution(
     host_newick: str | Path | None = None,
     connectivity_path: str | Path | None = None,
     synthetic: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     from evonexus.qc.run import load_canonical
 
     out = Path(out_dir)
@@ -150,14 +150,14 @@ def run_evolution(
     sel_cfg = cfg.get("selection", {}) or {}
     recomb_cfg = cfg.get("recombination", {}) or {}
 
-    results: List[Dict[str, Any]] = []
-    site_rows: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
+    site_rows: list[dict[str, Any]] = []
 
     for lineage, records in selection["selected"].items():
         lin_dir = out / "lineages" / lineage
         lin_dir.mkdir(parents=True, exist_ok=True)
         raw_fa = write_fasta(records, lin_dir / f"{lineage}.fasta")
-        entry: Dict[str, Any] = {"lineage": lineage, "n_sequences": len(records)}
+        entry: dict[str, Any] = {"lineage": lineage, "n_sequences": len(records)}
 
         aln_path = lin_dir / f"{lineage}.aln.fasta"
         aln = tools.run_mafft(raw_fa, aln_path, align_cfg.get("args", ["--auto"]))
@@ -180,7 +180,7 @@ def run_evolution(
             results.append(entry)
             continue
 
-        recombination: Dict[str, Any] = {"status": "not_run"}
+        recombination: dict[str, Any] = {"status": "not_run"}
         if recomb_cfg.get("enabled", True):
             gard = tools.run_hyphy("gard", aln_path, aln_path, lin_dir / "gard.json")
             if gard["status"] == "tool_missing":
@@ -245,7 +245,7 @@ def run_evolution(
     write_table(sites_df, out / "selection_results")
 
     # ---- integration with connectivity ------------------------------------
-    integration: Dict[str, Any] = {"status": "not_run"}
+    integration: dict[str, Any] = {"status": "not_run"}
     if (cfg.get("integration", {}) or {}).get("relate_to_connectivity") and connectivity_path:
         try:
             pos = tables["detections"]
@@ -260,7 +260,7 @@ def run_evolution(
             write_table(merged, out / "evolution_host_breadth")
             integration = {
                 "status": "ok",
-                "n_lineages": int(len(merged)),
+                "n_lineages": len(merged),
                 "note": (cfg.get("integration", {}) or {}).get("note"),
             }
         except Exception as exc:
@@ -271,7 +271,7 @@ def run_evolution(
     })
     payload = {
         "status": "ok" if not results_df.empty else "no_lineages",
-        "n_lineages_attempted": int(len(results_df)),
+        "n_lineages_attempted": len(results_df),
         "n_with_tree": int((results_df.get("tree_status") == "ok").sum()) if len(results_df) else 0,
         "n_selection_eligible": int(results_df.get("selection_eligible", pd.Series(dtype=bool)).fillna(False).sum()) if len(results_df) else 0,
         "missing_tools": missing_tools,

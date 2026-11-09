@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pandas as pd
 
@@ -23,7 +23,7 @@ from evonexus.core.provenance import RunRecord
 from evonexus.quantify.matrix import apply_restriction
 
 
-def _host_covariance(path: str | Path | None) -> Dict[str, Any] | None:
+def _host_covariance(path: str | Path | None) -> dict[str, Any] | None:
     """Load a host phylogenetic covariance matrix if one was produced."""
     if not path:
         return None
@@ -36,14 +36,14 @@ def _host_covariance(path: str | Path | None) -> Dict[str, Any] | None:
     return None
 
 
-def _model_terms(comparisons: Dict[str, Any], model: str) -> List[str]:
+def _model_terms(comparisons: dict[str, Any], model: str) -> list[str]:
     spec = (comparisons.get("models") or {}).get(model)
     if spec is None:
         raise KeyError(f"model {model!r} is not defined in model_comparisons.yaml")
     return list(spec.get("terms") or [])
 
 
-def _requirements_met(spec: Dict[str, Any], context: Dict[str, bool]) -> tuple[bool, List[str]]:
+def _requirements_met(spec: dict[str, Any], context: dict[str, bool]) -> tuple[bool, list[str]]:
     unmet = [k for k, v in (spec.get("requires") or {}).items() if bool(v) and not context.get(k, False)]
     return (not unmet), unmet
 
@@ -51,7 +51,7 @@ def _requirements_met(spec: Dict[str, Any], context: Dict[str, bool]) -> tuple[b
 def run_bayesian(
     frame_path: str | Path,
     out_dir: str | Path,
-    models: List[str] | None = None,
+    models: list[str] | None = None,
     priors_config: str = "priors",
     comparisons_config: str = "model_comparisons",
     prior_variant: str = "regularizing",
@@ -66,7 +66,7 @@ def run_bayesian(
     run_sensitivity: bool = True,
     skip_primary: bool = False,
     processed_dir: str | Path | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -135,10 +135,10 @@ def run_bayesian(
     models = models or list((comparisons.get("models") or {}).keys())
     primary = comparisons.get("primary_model", "M3")
 
-    results: Dict[str, Any] = {}
-    loos: Dict[str, Dict[str, Any]] = {}
-    fitted: Dict[str, Dict[str, Any]] = {}
-    skipped: Dict[str, List[str]] = {}
+    results: dict[str, Any] = {}
+    loos: dict[str, dict[str, Any]] = {}
+    fitted: dict[str, dict[str, Any]] = {}
+    skipped: dict[str, list[str]] = {}
 
     prior_check_written = False
 
@@ -225,7 +225,7 @@ def run_bayesian(
     primary_post = fitted[primary_name]
     contrast = habitat_contrast(primary_post, frame, seed=int(sampler.get("seed", 20250101)))
 
-    contrast_paths: Dict[str, str] = {}
+    contrast_paths: dict[str, str] = {}
     if contrast.get("status") == "ok":
         contrast_paths["table"] = str(write_table(contrast["table"], out / "habitat_contrast"))
         contrast_paths["by_family"] = str(write_table(contrast["by_family"], out / "habitat_contrast_by_family"))
@@ -281,7 +281,7 @@ def run_bayesian(
     # ---- sensitivity -----------------------------------------------------
     sensitivity_path = None
     if run_sensitivity and contrast.get("status") == "ok":
-        sens_rows: List[Dict[str, Any]] = []
+        sens_rows: list[dict[str, Any]] = []
         sens_cfg = comparisons.get("sensitivity") or {}
         tables = None
         if processed_dir:
@@ -365,8 +365,8 @@ def run_bayesian(
     }
 
 
-def _sens_row(dimension: str, variant: str, contrast: Dict[str, Any],
-              n_cells: int | None = None) -> Dict[str, Any]:
+def _sens_row(dimension: str, variant: str, contrast: dict[str, Any],
+              n_cells: int | None = None) -> dict[str, Any]:
     if contrast.get("status") != "ok":
         return {"dimension": dimension, "variant": variant, "status": "failed",
                 "reason": contrast.get("reason")}

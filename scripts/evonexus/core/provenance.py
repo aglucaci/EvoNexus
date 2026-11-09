@@ -6,10 +6,11 @@ import platform
 import subprocess
 import sys
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
 from evonexus.core.io import sha256_file, write_json
 
@@ -29,7 +30,7 @@ _TRACKED_PACKAGES = (
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def _git(*args: str) -> str | None:
@@ -48,8 +49,8 @@ def _git(*args: str) -> str | None:
     return out.stdout.strip() or None
 
 
-def package_versions() -> Dict[str, str]:
-    versions: Dict[str, str] = {}
+def package_versions() -> dict[str, str]:
+    versions: dict[str, str] = {}
     for name in _TRACKED_PACKAGES:
         try:
             module = __import__(name)
@@ -60,7 +61,7 @@ def package_versions() -> Dict[str, str]:
     return versions
 
 
-def record_environment() -> Dict[str, Any]:
+def record_environment() -> dict[str, Any]:
     """Everything needed to say which software produced an output."""
     return {
         "timestamp_utc": utc_now(),
@@ -79,10 +80,10 @@ class RunRecord:
     """Accumulates provenance for one pipeline step and writes it as JSON."""
 
     step: str
-    params: Dict[str, Any] = field(default_factory=dict)
-    inputs: List[Dict[str, Any]] = field(default_factory=list)
-    outputs: List[Dict[str, Any]] = field(default_factory=list)
-    messages: List[Dict[str, str]] = field(default_factory=list)
+    params: dict[str, Any] = field(default_factory=dict)
+    inputs: list[dict[str, Any]] = field(default_factory=list)
+    outputs: list[dict[str, Any]] = field(default_factory=list)
+    messages: list[dict[str, str]] = field(default_factory=list)
     status: str = "running"
     synthetic: bool = False
     started_at: str = field(default_factory=utc_now)
@@ -100,9 +101,9 @@ class RunRecord:
             self.add_input(p, role)
 
     @staticmethod
-    def _describe(path: str | Path, role: str, checksum: bool) -> Dict[str, Any]:
+    def _describe(path: str | Path, role: str, checksum: bool) -> dict[str, Any]:
         p = Path(path)
-        entry: Dict[str, Any] = {"path": str(p), "role": role, "exists": p.exists()}
+        entry: dict[str, Any] = {"path": str(p), "role": role, "exists": p.exists()}
         if p.exists() and p.is_file():
             entry["bytes"] = p.stat().st_size
             if checksum and entry["bytes"] <= 2 * (1 << 30):
