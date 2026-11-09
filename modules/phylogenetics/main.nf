@@ -34,9 +34,9 @@ process RUN_EVOLUTION {
     path 'evolution', emit: evolution
 
     script:
-    def seqs      = sequences.name    != 'NO_FILE' ? "--sequences ${sequences}" : ''
-    def tree      = newick.name       != 'NO_FILE' ? "--host-newick ${newick}"  : ''
-    def conn      = connectivity.name != 'NO_FILE' ? "--connectivity ${connectivity}" : ''
+    def seqs      = !sequences.name.startsWith('NO_') ? "--sequences ${sequences}" : ''
+    def tree      = !newick.name.startsWith('NO_') ? "--host-newick ${newick}"  : ''
+    def conn      = !connectivity.name.startsWith('NO_') ? "--connectivity ${connectivity}" : ''
     def synthetic = params.synthetic ? '--synthetic' : ''
     """
     python -m evonexus.cli evolution \\

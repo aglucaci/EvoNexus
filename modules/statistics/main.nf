@@ -23,8 +23,8 @@ process FIT_MODEL {
     // aborting: the CLI then writes unadjusted rates and states plainly that
     // no habitat effect was estimated.
     def skip      = (primary_allowed.toString().toLowerCase() == 'true') ? '' : '--skip-primary'
-    def hostcov   = host_covariance.name != 'NO_FILE' ? "--host-covariance ${host_covariance}" : ''
-    def truth_arg = truth.name != 'NO_FILE' ? "--truth ${truth}" : ''
+    def hostcov   = !host_covariance.name.startsWith('NO_') ? "--host-covariance ${host_covariance}" : ''
+    def truth_arg = !truth.name.startsWith('NO_') ? "--truth ${truth}" : ''
     """
     python -m evonexus.cli bayesian \\
         --frame ${frame} \\
@@ -53,7 +53,7 @@ process COMPUTE_CONNECTIVITY {
 
     script:
     def synthetic = params.synthetic ? '--synthetic' : ''
-    def hostcov   = host_covariance.name != 'NO_FILE' ? "--host-covariance ${host_covariance}" : ''
+    def hostcov   = !host_covariance.name.startsWith('NO_') ? "--host-covariance ${host_covariance}" : ''
     """
     python -m evonexus.cli connectivity \\
         --posterior-dir ${bayesian} \\

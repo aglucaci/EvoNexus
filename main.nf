@@ -98,11 +98,19 @@ synthetic=${params.synthetic}  ·  engine=${params.engine}
                      'watermarked. They are not scientific results.'
         }
 
-        def no_file = file("${projectDir}/assets/NO_FILE")
-        def sequences_ch   = params.sequences   ? Channel.fromPath(params.sequences,   checkIfExists: true)
-                                                : Channel.value(no_file)
-        def host_newick_ch = params.host_newick ? Channel.fromPath(params.host_newick, checkIfExists: true)
-                                                : Channel.value(no_file)
+        // Every optional input gets its own placeholder file. Sharing one
+        // filename across inputs makes Nextflow refuse to stage them into the
+        // same process: "input file name collision".
+        no_sequences = file("${projectDir}/assets/NO_SEQUENCES")
+        no_newick    = file("${projectDir}/assets/NO_NEWICK")
+        no_conn      = file("${projectDir}/assets/NO_CONNECTIVITY")
+        no_hostcov   = file("${projectDir}/assets/NO_HOST_COVARIANCE")
+        no_truth     = file("${projectDir}/assets/NO_TRUTH")
+
+        sequences_ch   = params.sequences   ? Channel.fromPath(params.sequences,   checkIfExists: true)
+                                                : Channel.value(no_sequences)
+        host_newick_ch = params.host_newick ? Channel.fromPath(params.host_newick, checkIfExists: true)
+                                                : Channel.value(no_newick)
 
         // ---- 01 acquire and inventory ------------------------------------
         DOWNLOAD()
@@ -112,15 +120,15 @@ synthetic=${params.synthetic}  ·  engine=${params.engine}
 
         // A host phylogeny is optional. Without it model M5 is skipped and the
         // connectivity-versus-relatedness panel is marked as not generated.
-        def host_cov_ch = Channel.value(no_file)
+        host_cov_ch = Channel.value(no_hostcov)
         if (params.host_newick) {
             BUILD_HOST_PHYLOGENY(PREPROCESS.out.processed, host_newick_ch)
-            host_cov_ch = BUILD_HOST_PHYLOGENY.out.covariance.ifEmpty(no_file)
+            host_cov_ch = BUILD_HOST_PHYLOGENY.out.covariance.ifEmpty(no_hostcov)
         }
 
         // Synthetic runs carry their generating parameters, which enables the
         // parameter-recovery check. Real runs have none, and it is skipped.
-        def truth_ch = DOWNLOAD.out.truth.ifEmpty(no_file)
+        truth_ch = DOWNLOAD.out.truth.ifEmpty(no_truth)
 
         // ---- 06 Bayesian inference ----------------------------------------
         BAYESIAN(
@@ -138,11 +146,11 @@ synthetic=${params.synthetic}  ·  engine=${params.engine}
         // Connectivity results feed the evolutionary integration step. When
         // the primary model was skipped there are none, and EVOLUTION runs
         // without them rather than waiting forever.
-        def connectivity_table = CONNECTIVITY.out.connectivity
+        connectivity_table = CONNECTIVITY.out.connectivity
             .map { dir -> dir.list().find { it.startsWith('connectivity.') }
                               ? file("${dir}/" + dir.list().find { it.startsWith('connectivity.') })
-                              : no_file }
-            .ifEmpty(no_file)
+                              : no_conn }
+            .ifEmpty(no_conn)
 
         EVOLUTION(PREPROCESS.out.processed, sequences_ch, connectivity_table, host_newick_ch)
 
@@ -150,10 +158,10 @@ synthetic=${params.synthetic}  ·  engine=${params.engine}
         // Reporting reads the published results tree, so it waits for every
         // analysis to finish and is then handed that directory. Returning a
         // Channel from inside `map` would nest channels; emit the path itself.
-        def results_ch = PREPROCESS.out.qc
+        results_ch = PREPROCESS.out.qc
             .mix(BAYESIAN.out.bayesian,
-                 CONNECTIVITY.out.connectivity.ifEmpty(no_file),
-                 VALIDATION.out.validation.ifEmpty(no_file),
+                 CONNECTIVITY.out.connectivity.ifEmpty(no_conn),
+                 VALIDATION.out.validation.ifEmpty(no_truth),
                  EVOLUTION.out.evolution)
             .collect()
             .map { file(params.outdir) }

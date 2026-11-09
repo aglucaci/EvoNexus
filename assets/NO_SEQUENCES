@@ -1,0 +1,3 @@
+Placeholder for an optional pipeline input that was not supplied.
+Each optional input needs its OWN placeholder name: staging two inputs that
+share a filename into one process is an input file name collision.
