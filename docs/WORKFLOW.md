@@ -5,7 +5,7 @@
 ```
                     ┌──────────────────────────┐
                     │ 01 ACQUIRE_DATA          │  manifest + raw files
-                    │    INVENTORY_SOURCES     │  real headers, expectations
+                    │                          │  + inventory of real headers
                     └────────────┬─────────────┘
                                  ▼
                     ┌──────────────────────────┐
@@ -14,13 +14,12 @@
                     │     mapping is approved) │
                     └────────────┬─────────────┘
                                  ▼
-          ┌──────────────────────┴──────────────────────┐
-          ▼                                             ▼
-┌───────────────────┐                        ┌────────────────────┐
-│ 03 BUILD_REFERENCE│                        │ 04 CREATE_MATRIX   │
-│    viral catalog  │                        │    library×lineage │
-└───────────────────┘                        └─────────┬──────────┘
-                                                       ▼
+                                 ▼
+                                      ┌────────────────────┐
+                                      │ 04 CREATE_MATRIX   │
+                                      │    library×lineage │
+                                      └─────────┬──────────┘
+                                                ▼
                                             ┌────────────────────┐
                                             │ 05 RUN_QC_GATES    │
                                             │    G1 … G7         │
@@ -48,16 +47,36 @@
 
 Render the real DAG with `nextflow run . -profile test -with-dag dag.html`.
 
+The curated viral catalog has no process of its own: harmonization produces
+`processed/viruses.*` with eligibility flags and exclusion reasons, and a
+process that only copied it under another name would add a failure mode
+without adding information.
+
+### Publishing contract
+
+Each process writes into a stage-named directory (`acquisition/`,
+`processed/`, `qc/`, `matrix/`, `bayesian/`, …) and publishes to
+`params.outdir` itself, so results land at `results/<profile>/<stage>/`.
+Naming the stage in both the output path and `publishDir` would produce
+`results/acquisition/acquisition/`.
+
+### Nextflow version
+
+`nextflow.config` declares `nextflowVersion '>=23.10.0'`, and CI runs the test
+profile on both that minimum and the current stable release. Nextflow's strict
+syntax (25.10 onwards) rejects constructs the older parser accepted —
+`include` inside a workflow body, `return` in a workflow, and
+`workflow.onComplete` as a script-level statement — so the pipeline is written
+to satisfy both.
+
 ## Processes
 
 | Process | Module | Label | Does |
 | --- | --- | --- | --- |
 | `ACQUIRE_DATA` | acquisition | network | Manifest, raw download, inventory |
-| `INVENTORY_SOURCES` | acquisition | light | Describe a raw directory |
 | `DOWNLOAD_READS` | acquisition | network | SRA FASTQ (`raw_reads` only) |
 | `HARMONIZE_METADATA` | metadata | light | Canonical tables + crosswalk |
 | `RUN_QC_GATES` | metadata | light | G1–G7, QC report, waterfall |
-| `BUILD_REFERENCE` | viromics | light | Standardized viral catalog |
 | `CREATE_MATRIX` | viromics | light | Analysis frame per resolution |
 | `FIT_MODEL` | statistics | heavy | M0–M5, contrast, sensitivity |
 | `COMPUTE_CONNECTIVITY` | statistics | standard | C(i,j) and nulls |

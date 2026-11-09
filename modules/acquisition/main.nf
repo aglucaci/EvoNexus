@@ -1,16 +1,24 @@
 // Data acquisition: manifests, downloads, inventory.
+//
+// Publishing contract, shared by every module: a process writes into a
+// stage-named directory (`acquisition/`, `processed/`, `qc/`, …) and
+// publishes to `params.outdir` itself. Naming the stage in both the output
+// path and publishDir is what produced `results/acquisition/acquisition/`.
 
 process ACQUIRE_DATA {
     label 'network'
     tag "${params.acquisition_mode}${params.synthetic ? ':synthetic' : ''}"
-    publishDir "${params.outdir}/acquisition", mode: params.publish_mode
+    publishDir "${params.outdir}", mode: params.publish_mode
 
     output:
-    path 'acquisition/manifest.json',   emit: manifest
-    path 'acquisition/inventory.json',  emit: inventory
-    path 'acquisition/inventory.md',    emit: inventory_md
-    path 'acquisition/raw',             emit: raw
+    path 'acquisition/manifest.json',           emit: manifest
+    path 'acquisition/inventory.json',          emit: inventory
+    path 'acquisition/inventory.md',            emit: inventory_md
+    path 'acquisition/raw',                     emit: raw
     path 'acquisition/run_record_acquire.json', emit: run_record
+    // Only produced in synthetic mode; it carries the generating parameters
+    // so the Bayesian stage can run a parameter-recovery check.
+    path 'acquisition/raw/synthetic/synthetic_truth.json', emit: truth, optional: true
 
     script:
     def synthetic = params.synthetic ? '--synthetic' : ''
@@ -21,23 +29,6 @@ process ACQUIRE_DATA {
         --mode ${params.acquisition_mode} \\
         --seed ${params.seed} \\
         ${synthetic} ${offline}
-    """
-}
-
-process INVENTORY_SOURCES {
-    label 'light'
-    publishDir "${params.outdir}/qc", mode: params.publish_mode
-
-    input:
-    path raw
-
-    output:
-    path 'inventory/inventory.json', emit: inventory
-    path 'inventory/inventory.md',   emit: report
-
-    script:
-    """
-    python -m evonexus.cli inventory --raw-dir ${raw} --out-dir inventory
     """
 }
 

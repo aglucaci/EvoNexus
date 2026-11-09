@@ -1,37 +1,22 @@
-// Viral reference handling and the library x lineage response matrix.
-
-process BUILD_REFERENCE {
-    label 'light'
-    publishDir "${params.outdir}/viromics", mode: params.publish_mode
-
-    input:
-    path processed
-
-    output:
-    path 'reference/viral_catalog*', emit: catalog, optional: true
-
-    script:
-    """
-    mkdir -p reference
-    cp -f ${processed}/viruses* reference/ 2>/dev/null || true
-    for f in reference/viruses*; do [ -e "\$f" ] && mv "\$f" "\${f/viruses/viral_catalog}"; done
-    """
-}
+// The library x lineage response matrix.
+//
+// There is no separate reference-building process: the curated viral catalog,
+// with its eligibility flags and exclusion reasons, is produced by
+// harmonization as `processed/viruses.*`. A process that only copied it under
+// another name would add a failure mode without adding information.
 
 process CREATE_MATRIX {
     label 'light'
     tag "${resolution}"
-    publishDir "${params.outdir}/matrix", mode: params.publish_mode
+    publishDir "${params.outdir}", mode: params.publish_mode
 
     input:
     path processed
-    val resolution
+    each resolution
 
     output:
-    tuple val(resolution), path("matrix/analysis_frame_${resolution}*"), emit: frame
-    path "matrix/detection_matrix_${resolution}*",                        emit: matrix
-    path "matrix/matrix_metadata_${resolution}.json",                     emit: metadata
-    path "matrix/matrix_ledger_${resolution}*",                           emit: ledger
+    tuple val(resolution), path("matrix/analysis_frame_${resolution}.*"), emit: frame
+    path "matrix/*",                                                      emit: all
 
     script:
     def synthetic = params.synthetic ? '--synthetic' : ''

@@ -203,6 +203,19 @@ def run_validation(
         record.finish(out / "run_record_validation.json", status="empty")
         return {"status": "empty"}
 
+    # Without a fitted primary model there is nothing to validate; say so
+    # rather than cross-validating a model the QC gates refused to fit.
+    if posterior_dir and not (Path(posterior_dir) / f"posterior_{model}.json").exists():
+        reason = (
+            f"no posterior draws for model {model}; the primary model was not "
+            "fitted, most likely because a critical QC gate failed"
+        )
+        record.warn(f"validation not run: {reason}")
+        write_json({"status": "not_run", "reason": reason, "model": model,
+                    "synthetic": synthetic}, out / "validation_metadata.json")
+        record.finish(out / "run_record_validation.json", status="not_run")
+        return {"status": "not_run", "reason": reason}
+
     priors_cfg = load_config(priors_config)
     comparisons = load_config(comparisons_config)
     priors = resolve_variant(priors_cfg, prior_variant)

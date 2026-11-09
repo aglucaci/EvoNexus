@@ -11,6 +11,5 @@ workflow EVOLUTION {
     RUN_EVOLUTION(processed, sequences, connectivity, host_newick)
 
     emit:
-    all    = RUN_EVOLUTION.out.all.collect()
-    status = RUN_EVOLUTION.out.status
+    evolution = RUN_EVOLUTION.out.evolution
 }

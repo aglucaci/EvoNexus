@@ -3,12 +3,11 @@ include { CROSS_VALIDATE } from '../modules/statistics/main.nf'
 workflow VALIDATION {
     take:
     frame
-    posteriors
+    bayesian
 
     main:
-    CROSS_VALIDATE(frame, posteriors)
+    CROSS_VALIDATE(frame, bayesian)
 
     emit:
-    all      = CROSS_VALIDATE.out.all.collect()
-    metadata = CROSS_VALIDATE.out.metadata
+    validation = CROSS_VALIDATE.out.validation
 }

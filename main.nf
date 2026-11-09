@@ -13,6 +13,10 @@
 
 nextflow.enable.dsl = 2
 
+// Includes must be at script level: Nextflow's parser rejects an `include`
+// inside a workflow body. The host-phylogeny process is therefore always
+// imported and conditionally *invoked* below.
+include { BUILD_HOST_PHYLOGENY } from './modules/phylogenetics/main.nf'
 include { DOWNLOAD }     from './workflows/download.nf'
 include { PREPROCESS }   from './workflows/preprocess.nf'
 include { BAYESIAN }     from './workflows/bayesian.nf'
@@ -70,95 +74,90 @@ def helpMessage() {
 
 workflow {
 
+    // `return` is not permitted in a workflow body under Nextflow's strict
+    // syntax, so the three operating modes are expressed as one if/else chain
+    // rather than as early exits.
     if (params.help) {
         helpMessage()
-        return
     }
-
-    log.info """
-    EvoNexus ${workflow.manifest.version}  ·  mode=${params.mode}  ·  \
-synthetic=${params.synthetic}  ·  engine=${params.engine}
-    outdir: ${params.outdir}
-    """.stripIndent()
-
-    if (params.synthetic) {
-        log.warn 'SYNTHETIC MODE — outputs validate software only and are watermarked. ' +
-                 'They are not scientific results.'
-    }
-
-    def no_file = file("${projectDir}/assets/NO_FILE")
-    def sequences_ch   = params.sequences   ? Channel.fromPath(params.sequences,   checkIfExists: true)
-                                            : Channel.value(no_file)
-    def host_newick_ch = params.host_newick ? Channel.fromPath(params.host_newick, checkIfExists: true)
-                                            : Channel.value(no_file)
-
-    // ---- manuscript-only mode: regenerate outputs from existing results ----
-    if (params.mode == 'manuscript') {
+    else if (params.mode == 'manuscript') {
+        // Regenerate figures, tables and legends from existing results.
+        // No acquisition, no sampling.
+        log.info "EvoNexus ${workflow.manifest.version} · manuscript mode · outdir: ${params.outdir}"
         MANUSCRIPT(Channel.fromPath(params.outdir, type: 'dir', checkIfExists: true))
-        return
     }
+    else {
+        log.info """
+        EvoNexus ${workflow.manifest.version}  ·  mode=${params.mode}  ·  \
+synthetic=${params.synthetic}  ·  engine=${params.engine}
+        outdir: ${params.outdir}
+        """.stripIndent()
 
-    // ---- 01 acquire and inventory -----------------------------------------
-    DOWNLOAD()
+        if (params.synthetic) {
+            log.warn 'SYNTHETIC MODE — outputs validate software only and are ' +
+                     'watermarked. They are not scientific results.'
+        }
 
-    // ---- 02-05 harmonize, curate, build the matrix, run the gates ---------
-    PREPROCESS(DOWNLOAD.out.inventory, DOWNLOAD.out.raw)
+        def no_file = file("${projectDir}/assets/NO_FILE")
+        def sequences_ch   = params.sequences   ? Channel.fromPath(params.sequences,   checkIfExists: true)
+                                                : Channel.value(no_file)
+        def host_newick_ch = params.host_newick ? Channel.fromPath(params.host_newick, checkIfExists: true)
+                                                : Channel.value(no_file)
 
-    // A host phylogeny is optional. Without it, model M5 is skipped and the
-    // connectivity-versus-relatedness panel is marked as not generated.
-    host_cov_ch = Channel.value(no_file)
-    if (params.host_newick) {
-        include { BUILD_HOST_PHYLOGENY } from './modules/phylogenetics/main.nf'
-        BUILD_HOST_PHYLOGENY(PREPROCESS.out.processed, host_newick_ch)
-        host_cov_ch = BUILD_HOST_PHYLOGENY.out.covariance.ifEmpty(no_file)
+        // ---- 01 acquire and inventory ------------------------------------
+        DOWNLOAD()
+
+        // ---- 02-05 harmonize, curate, build the matrix, run the gates -----
+        PREPROCESS(DOWNLOAD.out.inventory, DOWNLOAD.out.raw)
+
+        // A host phylogeny is optional. Without it model M5 is skipped and the
+        // connectivity-versus-relatedness panel is marked as not generated.
+        def host_cov_ch = Channel.value(no_file)
+        if (params.host_newick) {
+            BUILD_HOST_PHYLOGENY(PREPROCESS.out.processed, host_newick_ch)
+            host_cov_ch = BUILD_HOST_PHYLOGENY.out.covariance.ifEmpty(no_file)
+        }
+
+        // Synthetic runs carry their generating parameters, which enables the
+        // parameter-recovery check. Real runs have none, and it is skipped.
+        def truth_ch = DOWNLOAD.out.truth.ifEmpty(no_file)
+
+        // ---- 06 Bayesian inference ----------------------------------------
+        BAYESIAN(
+            PREPROCESS.out.primary_frame,
+            PREPROCESS.out.processed,
+            host_cov_ch,
+            truth_ch,
+            PREPROCESS.out.primary_allowed
+        )
+
+        // ---- 07-10 connectivity, validation, evolution ---------------------
+        CONNECTIVITY(PREPROCESS.out.primary_frame, BAYESIAN.out.bayesian, host_cov_ch)
+        VALIDATION(PREPROCESS.out.primary_frame, BAYESIAN.out.bayesian)
+
+        // Connectivity results feed the evolutionary integration step. When
+        // the primary model was skipped there are none, and EVOLUTION runs
+        // without them rather than waiting forever.
+        def connectivity_table = CONNECTIVITY.out.connectivity
+            .map { dir -> dir.list().find { it.startsWith('connectivity.') }
+                              ? file("${dir}/" + dir.list().find { it.startsWith('connectivity.') })
+                              : no_file }
+            .ifEmpty(no_file)
+
+        EVOLUTION(PREPROCESS.out.processed, sequences_ch, connectivity_table, host_newick_ch)
+
+        // ---- 11-12 manuscript ----------------------------------------------
+        // Reporting reads the published results tree, so it waits for every
+        // analysis to finish and is then handed that directory. Returning a
+        // Channel from inside `map` would nest channels; emit the path itself.
+        def results_ch = PREPROCESS.out.qc
+            .mix(BAYESIAN.out.bayesian,
+                 CONNECTIVITY.out.connectivity.ifEmpty(no_file),
+                 VALIDATION.out.validation.ifEmpty(no_file),
+                 EVOLUTION.out.evolution)
+            .collect()
+            .map { file(params.outdir) }
+
+        MANUSCRIPT(results_ch)
     }
-
-    // ---- 06 Bayesian inference ---------------------------------------------
-    BAYESIAN(
-        PREPROCESS.out.primary_frame,
-        PREPROCESS.out.processed,
-        host_cov_ch,
-        PREPROCESS.out.primary_allowed
-    )
-
-    // ---- 07-10 connectivity, validation, evolution --------------------------
-    CONNECTIVITY(PREPROCESS.out.primary_frame, BAYESIAN.out.posteriors, host_cov_ch)
-    VALIDATION(PREPROCESS.out.primary_frame, BAYESIAN.out.posteriors)
-
-    connectivity_table = CONNECTIVITY.out.all
-        .flatten()
-        .filter { it.name.startsWith('connectivity.') }
-        .ifEmpty(no_file)
-        .first()
-
-    EVOLUTION(PREPROCESS.out.processed, sequences_ch, connectivity_table, host_newick_ch)
-
-    // ---- 11-12 manuscript ----------------------------------------------------
-    results_ch = BAYESIAN.out.all
-        .mix(CONNECTIVITY.out.all, VALIDATION.out.all, EVOLUTION.out.all)
-        .collect()
-        .map { Channel.fromPath(params.outdir, type: 'dir') }
-        .flatten()
-
-    MANUSCRIPT(results_ch)
-}
-
-workflow.onComplete {
-    log.info """
-    ===========================================================================
-    EvoNexus finished: ${workflow.success ? 'OK' : 'FAILED'}
-    Duration   : ${workflow.duration}
-    Results    : ${params.outdir}
-    QC report  : ${params.outdir}/qc/qc_report.md
-    Run report : ${params.outdir}/manuscript/analysis_report.md
-    ---------------------------------------------------------------------------
-    Read the QC report before any result. A critical gate failure means the
-    primary settlement-versus-wild analysis was NOT run, and only descriptive
-    outputs are present.
-    ===========================================================================
-    """.stripIndent()
-}
-
-workflow.onError {
-    log.error "EvoNexus stopped: ${workflow.errorMessage}"
 }

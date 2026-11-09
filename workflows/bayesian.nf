@@ -5,13 +5,12 @@ workflow BAYESIAN {
     frame
     processed
     host_covariance
+    truth
     primary_allowed
 
     main:
-    FIT_MODEL(frame, processed, host_covariance, primary_allowed)
+    FIT_MODEL(frame, processed, host_covariance, truth, primary_allowed)
 
     emit:
-    all        = FIT_MODEL.out.all.collect()
-    status     = FIT_MODEL.out.status
-    posteriors = FIT_MODEL.out.all.collect()
+    bayesian = FIT_MODEL.out.bayesian
 }

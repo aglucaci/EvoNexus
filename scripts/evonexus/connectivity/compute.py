@@ -336,6 +336,21 @@ def run_connectivity(
         record.finish(out / "run_record_connectivity.json", status="empty")
         return {"status": "empty"}
 
+    # The primary model may have been skipped because a critical QC gate
+    # failed. There are then no posterior draws to predict from, and the
+    # honest result is a recorded absence rather than a crash.
+    if not (Path(posterior_dir) / f"posterior_{model}.json").exists():
+        reason = (
+            f"no posterior draws for model {model}; the primary model was not "
+            "fitted, most likely because a critical QC gate failed"
+        )
+        record.warn(f"connectivity not computed: {reason}")
+        write_json({"status": "not_run", "reason": reason, "model": model,
+                    "synthetic": synthetic, "caveat": CONNECTIVITY_CAVEAT},
+                   out / "connectivity_metadata.json")
+        record.finish(out / "run_record_connectivity.json", status="not_run")
+        return {"status": "not_run", "reason": reason}
+
     posterior = load_posterior(posterior_dir, model)
     distances = None
     if host_distance_path and Path(host_distance_path).exists():

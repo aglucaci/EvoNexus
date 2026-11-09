@@ -6,6 +6,36 @@ All notable changes to EvoNexus are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Nextflow strict syntax (25.10+). The pipeline failed to compile on current
+  releases: `include` inside a workflow body, `return` in a workflow, and
+  `workflow.onComplete` as a script-level statement are all rejected by the
+  new parser. Handlers moved to `nextflow.config`, includes to script level,
+  and the workflow modes became an if/else chain.
+- Publishing contract. Every process wrote into a stage-named directory *and*
+  published to `outdir/<stage>`, producing `results/acquisition/acquisition/`.
+  Processes now publish to `outdir` itself.
+- `HARMONIZE_METADATA` emitted a list of files where every downstream stage
+  expects a directory, so `--processed-dir` received nine filenames.
+- PyMC path: `pm.Deterministic` cannot share a name with its dimension label,
+  which made every varying-effect model fail under the NUTS engine. This was
+  the first end-to-end execution of that path.
+- Connectivity and cross-validation now report a missing posterior as a
+  documented absence instead of being guarded by a Groovy `when:` expression
+  that could not be evaluated.
+- Removed config selectors for processes that do not exist
+  (`ALIGN_SEQUENCES`, `INFER_PHYLOGENY`, `TEST_SELECTION`); the evolutionary
+  tools all run inside `RUN_EVOLUTION`.
+
+### Changed
+- CI runs the test profile through the real Nextflow DAG on both the declared
+  minimum (23.10.1) and the current stable release, and asserts the shape of
+  the published tree. Previously it only ran `nextflow run . --help` on the
+  pinned minimum, which is why none of the above was caught.
+- Dropped `INVENTORY_SOURCES` and `BUILD_REFERENCE`: acquisition already
+  writes the inventory, and the viral catalog is harmonization's
+  `processed/viruses.*`.
+
 ## [0.1.0] — 2026-11-08
 
 First working pipeline.

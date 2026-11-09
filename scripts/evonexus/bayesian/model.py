@@ -40,6 +40,14 @@ def pymc_available() -> bool:
     return True
 
 
+def _effect_name(block_name: str) -> str:
+    """Deterministic name for a block's effects.
+
+    It must differ from the dimension label, which is the block name itself.
+    """
+    return f"effect_{block_name}"
+
+
 def _dist(pm, name: str, spec: dict[str, Any], shape=None):
     kind = str(spec.get("dist", "normal")).lower()
     if kind == "normal":
@@ -91,9 +99,14 @@ def build_pymc_model(design: ModelDesign, priors: dict[str, Any]):
                 lam = _dist(pm, f"lambda_{block.name}", lam_spec)
                 mixed = lam * block.covariance + (1.0 - lam) * np.eye(block.size)
                 chol = pt.slinalg.cholesky(mixed + 1e-6 * np.eye(block.size))
-                effect = pm.Deterministic(block.name, sd * pt.dot(chol, offset), dims=block.name)
+                # PyMC rejects a variable whose name equals its dimension
+                # label, so the effect is prefixed and the dim keeps the
+                # block name.
+                effect = pm.Deterministic(_effect_name(block.name),
+                                          sd * pt.dot(chol, offset), dims=block.name)
             else:
-                effect = pm.Deterministic(block.name, sd * offset, dims=block.name)
+                effect = pm.Deterministic(_effect_name(block.name),
+                                          sd * offset, dims=block.name)
             eta = eta + effect[block.index]
 
         p = pm.Deterministic("p", pm.math.sigmoid(eta), dims="obs")
@@ -114,7 +127,7 @@ def _flatten_posterior(idata, design: ModelDesign, names: list[str]) -> np.ndarr
         pieces.append(np.asarray(post[f"b_{safe}"])[..., None])
 
     for block in design.blocks:
-        pieces.append(np.asarray(post[block.name]))
+        pieces.append(np.asarray(post[_effect_name(block.name)]))
 
     return np.concatenate(pieces, axis=-1)
 

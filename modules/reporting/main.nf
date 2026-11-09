@@ -8,9 +8,10 @@ process GENERATE_REPORT {
     path results
 
     output:
-    path 'figures/*',    emit: figures,  optional: true
-    path 'tables/*',     emit: tables,   optional: true
-    path 'manuscript/*', emit: manuscript
+    path 'figures',         emit: figures,  optional: true
+    path 'tables',          emit: tables,   optional: true
+    path 'figure_legends',  emit: legends,  optional: true
+    path 'manuscript',      emit: manuscript
 
     when:
     !params.skip_report

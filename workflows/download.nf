@@ -1,26 +1,26 @@
-include { ACQUIRE_DATA; INVENTORY_SOURCES; DOWNLOAD_READS } from '../modules/acquisition/main.nf'
+include { ACQUIRE_DATA; DOWNLOAD_READS } from '../modules/acquisition/main.nf'
 
 workflow DOWNLOAD {
     main:
+    // ACQUIRE_DATA produces all three acquisition outputs itself: the
+    // permanent manifest, the unmodified raw files, and the inventory of what
+    // the deposit actually contains.
     ACQUIRE_DATA()
-    INVENTORY_SOURCES(ACQUIRE_DATA.out.raw)
 
     // Raw reads only when the acquisition mode asks for them. Run accessions
     // come from the RunInfo tables the acquisition step already recorded.
-    reads = Channel.empty()
     if (params.acquisition_mode == 'raw_reads') {
-        runs = ACQUIRE_DATA.out.manifest
-            .splitJson()
-            .flatMap { entry -> entry.value instanceof List ? entry.value : [] }
+        def runs = ACQUIRE_DATA.out.manifest
+            .splitJson(path: 'sources')
             .filter { it instanceof Map && it.fastq_download }
             .flatMap { it.fastq_download.run_accessions ?: [] }
             .unique()
-        reads = DOWNLOAD_READS(runs).reads
+        DOWNLOAD_READS(runs)
     }
 
     emit:
     manifest  = ACQUIRE_DATA.out.manifest
-    inventory = INVENTORY_SOURCES.out.inventory
+    inventory = ACQUIRE_DATA.out.inventory
     raw       = ACQUIRE_DATA.out.raw
-    reads     = reads
+    truth     = ACQUIRE_DATA.out.truth
 }

@@ -2,19 +2,17 @@
 
 process HARMONIZE_METADATA {
     label 'light'
-    publishDir "${params.outdir}/processed", mode: params.publish_mode, pattern: 'processed/*'
-    publishDir "${params.outdir}/qc",        mode: params.publish_mode, pattern: 'processed/mapping_report.md'
+    publishDir "${params.outdir}", mode: params.publish_mode
 
     input:
     path inventory
     path raw
 
     output:
-    path 'processed/*',                     emit: all
-    path 'processed/libraries*',            emit: libraries
-    path 'processed/detections*',           emit: detections
-    path 'processed/harmonize_diagnostics.json', emit: diagnostics
-    path 'processed/mapping_report.md',     emit: mapping_report
+    // The whole directory is emitted, because every downstream stage takes a
+    // `--processed-dir` and needs the canonical tables together rather than
+    // as a loose list of files.
+    path 'processed', emit: processed
 
     script:
     def approval  = params.require_mapping_approval ? '' : '--skip-approval'
@@ -32,17 +30,14 @@ process HARMONIZE_METADATA {
 
 process RUN_QC_GATES {
     label 'light'
-    publishDir "${params.outdir}/qc", mode: params.publish_mode
+    publishDir "${params.outdir}", mode: params.publish_mode
 
     input:
     path processed
 
     output:
-    path 'qc/qc_gates.json',           emit: gates
-    path 'qc/qc_report.md',            emit: report
-    path 'qc/exclusion_waterfall*',    emit: waterfall
-    path 'qc/qc_gate_summary*',        emit: summary
-    env  PRIMARY_ALLOWED,              emit: primary_allowed
+    path 'qc',                  emit: qc
+    env('PRIMARY_ALLOWED'),     emit: primary_allowed
 
     script:
     def synthetic = params.synthetic ? '--synthetic' : ''
@@ -52,6 +47,9 @@ process RUN_QC_GATES {
         --processed-dir ${processed} \\
         --out-dir qc ${synthetic} ${strict}
 
+    # Read back the verdict so the workflow can route to the primary model or
+    # to the descriptive branch. A critical gate failure is not an error here:
+    # it is a documented outcome.
     PRIMARY_ALLOWED=\$(python -c "import json;print(json.load(open('qc/qc_gates.json'))['primary_model_allowed'])")
     """
 }

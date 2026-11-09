@@ -100,12 +100,66 @@ jobs:
           retention-days: 14
 
   nextflow:
-    name: Nextflow syntax
+    name: Nextflow pipeline (${{ matrix.nextflow }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Both ends of the supported range. Nextflow's strict syntax landed
+        # after 23.10 and rejects constructs the old parser accepted, so
+        # testing only the pinned minimum hides real breakage from users on
+        # a current release.
+        nextflow: ['23.10.1', 'latest-stable']
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
       - uses: nf-core/setup-nextflow@v2
         with:
-          version: '23.10.1'
-      - name: Check the pipeline parses and prints help
+          version: ${{ matrix.nextflow }}
+
+      - name: Help text
         run: nextflow run . --help
+
+      - name: Run the synthetic profile through the real DAG
+        env:
+          MPLBACKEND: Agg
+          OMP_NUM_THREADS: '1'
+        run: nextflow run . -profile test
+
+      - name: Assert the published tree has the expected shape
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          root = pathlib.Path('results/test')
+          expected = {'acquisition', 'processed', 'qc', 'matrix', 'bayesian',
+                      'connectivity', 'validation', 'evolution', 'figures',
+                      'tables', 'manuscript', 'figure_legends', 'docs'}
+          present = {p.name for p in root.iterdir() if p.is_dir()}
+          missing = expected - present
+          assert not missing, f'missing output directories: {sorted(missing)}'
+          # A stage must not publish into a directory named after itself.
+          doubled = [str(p) for p in root.rglob('*') if p.is_dir() and p.name == p.parent.name]
+          assert not doubled, f'doubly nested publish paths: {doubled}'
+          m = json.loads((root / 'manuscript' / 'manuscript_manifest.json').read_text())
+          assert m['synthetic'] is True
+          assert m['figures']['Figure4']['status'] == 'not_generated'
+          print('published tree is correct')
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: nextflow-log-${{ matrix.nextflow }}
+          path: .nextflow.log
+          retention-days: 7
