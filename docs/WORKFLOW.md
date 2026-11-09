@@ -60,14 +60,32 @@ Each process writes into a stage-named directory (`acquisition/`,
 Naming the stage in both the output path and `publishDir` would produce
 `results/acquisition/acquisition/`.
 
-### Nextflow version
+### Nextflow and Java versions
 
-`nextflow.config` declares `nextflowVersion '>=23.10.0'`, and CI runs the test
-profile on both that minimum and the current stable release. Nextflow's strict
-syntax (25.10 onwards) rejects constructs the older parser accepted —
-`include` inside a workflow body, `return` in a workflow, and
-`workflow.onComplete` as a script-level statement — so the pipeline is written
-to satisfy both.
+`nextflow.config` declares `nextflowVersion '>=24.04.0'`, and CI runs the test
+profile on both that end of the range and the current stable release.
+
+Two independent constraints apply:
+
+* **Parser.** Nextflow's strict syntax (25.10 onwards) rejects constructs the
+  older parser accepted — `include` inside a workflow body, `return` in a
+  workflow body, and `workflow.onComplete` as a script-level statement. The
+  pipeline avoids all three, and avoids the newer `env('VAR')` output form
+  that older releases lack, so one source tree satisfies both.
+* **Java.** Nextflow bundles its own Groovy, and a JDK newer than a given
+  release supports fails with `Unsupported class file major version` before
+  any pipeline code is read. Java 25 (class file major version 69) requires
+  Nextflow 26 or newer; Nextflow 24.x and 25.x need Java 17–24. CI therefore
+  pairs each Nextflow version with a JDK it supports.
+
+To test a specific version locally, `NXF_VER` selects it:
+
+```bash
+NXF_VER=24.10.5 nextflow run . -profile test
+```
+
+If that fails with a class-file-version error, your JDK is newer than that
+Nextflow release supports — use a current Nextflow, or an older JDK.
 
 ## Processes
 

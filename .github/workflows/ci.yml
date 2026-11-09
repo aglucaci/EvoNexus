@@ -105,13 +105,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Both ends of the supported range. Nextflow's strict syntax landed
-        # after 23.10 and rejects constructs the old parser accepted, so
-        # testing only the pinned minimum hides real breakage from users on
-        # a current release.
-        nextflow: ['23.10.1', 'latest-stable']
+        # Both ends of the supported range, each with a JDK that version can
+        # actually run on. Nextflow bundles its own Groovy, so a JDK newer
+        # than the release supports fails with "Unsupported class file major
+        # version" before any pipeline code is parsed — Java 25 needs
+        # Nextflow 26+. Testing only one end hides real breakage: the strict
+        # syntax of 25.10+ rejects constructs the old parser accepted, while
+        # older releases lack newer output forms.
+        include:
+          - nextflow: '24.10.5'
+            java: '17'
+          - nextflow: 'latest-stable'
+            java: '21'
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
 
       - uses: actions/setup-python@v5
         with:

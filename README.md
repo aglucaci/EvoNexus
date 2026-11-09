@@ -76,6 +76,11 @@ Run the deterministic synthetic test — no downloads, a few minutes on a laptop
 nextflow run . -profile test
 ```
 
+Nextflow 24.04 or newer is required. Note that Nextflow bundles its own Groovy
+runtime, so it must also match your JDK: Java 25 needs Nextflow 26+, while
+Nextflow 24.x and 25.x run on Java 17–24. A mismatch fails with
+`Unsupported class file major version` before any pipeline code is read.
+
 Or drive the same steps directly, without Nextflow:
 
 ```bash
