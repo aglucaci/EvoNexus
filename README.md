@@ -57,9 +57,17 @@ discovery → download → harmonize → QC gates ─┬─ pass → inference �
 ## Quick start
 
 ```bash
-git clone https://github.com/aglucaci/evonexus.git
-cd evonexus
+git clone https://github.com/aglucaci/EvoNexus.git
+cd EvoNexus
 conda env create -f environment.yml && conda activate evonexus
+```
+
+Conda is recommended because the evolution and `raw_reads` workflows need
+external tools (MAFFT, IQ-TREE 2, HyPhy, SRA Toolkit) that pip cannot
+install. For the Python side alone:
+
+```bash
+python -m pip install -r requirements.txt
 ```
 
 Run the deterministic synthetic test — no downloads, a few minutes on a laptop:

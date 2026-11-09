@@ -1,0 +1,28 @@
+# EvoNexus — pip install path.
+#
+#   python -m pip install -r requirements.txt
+#
+# This covers everything the Python package needs, including the intended
+# PyMC/NUTS sampling engine. The external phylogenetic and read-processing
+# tools (MAFFT, IQ-TREE 2, HyPhy, SRA Toolkit) are not pip-installable;
+# use environment.yml with conda if you need the evolution or raw_reads
+# workflows.
+
+# core
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+pyarrow>=14
+pyyaml>=6.0
+matplotlib>=3.8
+networkx>=3.2
+
+# Bayesian inference. Without these the pipeline still runs on its built-in
+# Polya-Gamma Gibbs engine, but published results should use PyMC/NUTS.
+pymc>=5.10
+arviz>=0.17
+xarray>=2023.12
+netCDF4>=1.6
+
+# sequence handling
+biopython>=1.83

@@ -1,0 +1,21 @@
+# Minimal dependency set for continuous integration.
+#
+# PyMC and ArviZ are deliberately excluded: CI exercises the built-in
+# Polya-Gamma Gibbs engine, which keeps the test job fast and proves the
+# pipeline runs in an environment without the heavy probabilistic-programming
+# stack. The tests that touch sampling pin that engine explicitly, so this is
+# a faithful run rather than an accidental fallback.
+#
+# For the PyMC/NUTS path, install requirements.txt instead.
+
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+pyarrow>=14
+pyyaml>=6.0
+matplotlib>=3.8
+
+# tooling
+pytest>=7.4
+pytest-cov>=4.1
+ruff>=0.3
