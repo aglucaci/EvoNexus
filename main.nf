@@ -35,7 +35,7 @@ def helpMessage() {
       nextflow run . -profile test
       nextflow run . -profile laptop
       nextflow run . -profile processed --acquisition_mode processed_only
-      nextflow run . -profile full,singularity --acquisition_mode raw_reads
+      nextflow run . -profile full,singularity --host_newick data/external/bats.nwk
       nextflow run . -profile evolution --sequences data/external/viral.fasta
       nextflow run . -profile manuscript
 
@@ -49,7 +49,11 @@ def helpMessage() {
       docker / singularity / conda / hpc may be combined with the above.
 
     Key parameters:
-      --acquisition_mode        processed_only (default) | raw_reads
+      --acquisition_mode        processed_only (default). `raw_reads` downloads
+                                FASTQ that no analysis stage consumes and is
+                                refused unless --allow_unused_read_download.
+      --container               Image for -profile docker/singularity. Build it
+                                from the repository Dockerfile; none is published.
       --require_mapping_approval  true (default). Harmonization refuses to run
                                   until config/metadata_mapping.yaml is approved.
       --fail_on_critical_gate   false (default). On a critical QC failure the
@@ -96,6 +100,29 @@ synthetic=${params.synthetic}  ·  engine=${params.engine}
         if (params.synthetic) {
             log.warn 'SYNTHETIC MODE — outputs validate software only and are ' +
                      'watermarked. They are not scientific results.'
+        }
+
+        // `raw_reads` downloads FASTQ that nothing downstream reads. There is
+        // no mapping, assembly or detection-reconstruction stage: assessability
+        // and the library x lineage response both come from the published
+        // deposit's own screening metadata. Refusing the mode is the honest
+        // behaviour; silently transferring terabytes that change no result is
+        // not. The escape hatch exists because caching the FASTQ locally is a
+        // legitimate thing to want on its own.
+        if (params.acquisition_mode == 'raw_reads' && !params.allow_unused_read_download) {
+            error """\
+            --acquisition_mode raw_reads is not supported for analysis.
+
+            DOWNLOAD_READS retrieves FASTQ from SRA, but no process consumes
+            it: EvoNexus has no read-mapping or detection-reconstruction
+            stage, so a raw_reads run produces exactly the same results as
+            processed_only after a far larger download.
+
+            Use --acquisition_mode processed_only for any analysis. To stage
+            the FASTQ anyway, for your own use, add
+            --allow_unused_read_download true and read it from
+            ${params.datadir}/raw/sra/.
+            """.stripIndent()
         }
 
         // Every optional input gets its own placeholder file. Sharing one

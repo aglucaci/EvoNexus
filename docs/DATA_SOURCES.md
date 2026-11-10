@@ -21,7 +21,7 @@ submission; the pipeline reports whatever the files actually contain.
 | Processed viral catalog | Figshare [10.6084/m9.figshare.24515056](https://doi.org/10.6084/m9.figshare.24515056) | Figshare API file manifest, then per-file download |
 | Ecological metadata | Same deposit | Discovered by inventory, not assumed |
 | Published alignments and trees | Same deposit | Retrieved and audited |
-| Raw metatranscriptomes | SRA [PRJNA862267](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA862267), [PRJNA997461](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA997461) | Entrez RunInfo; FASTQ only in `raw_reads` mode |
+| Raw metatranscriptomes | SRA [PRJNA862267](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA862267), [PRJNA997461](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA997461) | Entrez RunInfo is used; FASTQ is downloadable in `raw_reads` mode but unused |
 | Viral reference sequences | GenBank accessions from the publication | NCBI E-utilities, batched |
 
 **The pipeline does not assume the deposit contains a complete library ×
@@ -53,8 +53,13 @@ modelled cells have a value.
 - `processed_only` (default) — processed tables, metadata, alignments, trees,
   plus SRA RunInfo (small, and it is what links runs to libraries).
 - `raw_reads` — additionally retrieves FASTQ via `prefetch`/`fasterq-dump`
-  with per-run checksums and resumable caching, for reconstructing
-  library-level detections against a consistent reference catalog.
+  with per-run checksums and resumable caching. **No analysis stage consumes
+  these files.** Reconstructing library-level detections against a consistent
+  reference catalog would need a mapping and thresholding stage that EvoNexus
+  does not implement; detections and assessability currently come from the
+  published deposit's own screening metadata. The pipeline refuses this mode
+  unless `--allow_unused_read_download true` is passed, so that a run cannot
+  silently cost terabytes of transfer without changing a single result.
 
 ## Licensing
 

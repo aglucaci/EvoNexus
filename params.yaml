@@ -4,7 +4,9 @@
 # Only set what you mean to change; everything else comes from the profile.
 
 # --- data ----------------------------------------------------------------
-acquisition_mode: processed_only     # processed_only | raw_reads
+acquisition_mode: processed_only     # processed_only | raw_reads (unused FASTQ; refused by default)
+allow_unused_read_download: false    # permit raw_reads anyway, to cache FASTQ for your own use
+container: null                      # image for -profile docker/singularity; none is published
 offline: false
 synthetic: false
 

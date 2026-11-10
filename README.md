@@ -62,9 +62,9 @@ cd EvoNexus
 conda env create -f environment.yml && conda activate evonexus
 ```
 
-Conda is recommended because the evolution and `raw_reads` workflows need
-external tools (MAFFT, IQ-TREE 2, HyPhy, SRA Toolkit) that pip cannot
-install. For the Python side alone:
+Conda is recommended because the evolution workflow needs external tools
+(MAFFT, IQ-TREE 2, HyPhy) that pip cannot install. For the Python side
+alone:
 
 ```bash
 python -m pip install -r requirements.txt
@@ -135,15 +135,44 @@ analysis was allowed to run at all.
 | `test` | Deterministic synthetic | Very small | Unit and integration testing |
 | `laptop` | Small verified public subset | Limited chains and viral panel | Exercise metadata and modelling |
 | `processed` | Full published processed dataset | Moderate | Main analysis |
-| `full` | All eligible public reads and metadata | SLURM/HPC | Reconstruct and verify detections |
+| `full` | Full published processed dataset | SLURM/HPC | Main analysis at full sampling, M0–M5 |
 | `evolution` | Selected coding lineages | Moderate/HPC | Molecular evolutionary analyses |
 | `manuscript` | Existing validated results | Low | Regenerate figures, tables, legends |
 
-Combine with `docker`, `singularity`, `conda` or `hpc`:
+`full` is `processed` with a SLURM executor, the complete model ladder
+including M5, and a larger sampling budget (4 chains × 2000 draws, 1000
+permutations). Set `EVONEXUS_QUEUE` and, if your site needs them,
+`EVONEXUS_CLUSTER_OPTS` before submitting, and give Nextflow a work directory
+with quota:
 
 ```bash
-nextflow run . -profile full,singularity
+EVONEXUS_QUEUE=your_partition nextflow run . -profile full,conda -w /scratch/$USER/evonexus-work -resume
 ```
+
+M5 additionally needs `--host_newick`, a Newick tree over the host species
+names as they appear in `hosts.host_species_resolved`. Without it M5 is
+skipped and the connectivity-versus-relatedness panel of Figure 3 is marked
+as not generated.
+
+Combine with `docker`, `singularity`, `conda` or `hpc`. The container profiles
+expect an image built from the repository `Dockerfile`; **no image is
+published**, so build and push it first, or point `--container` at your own
+tag:
+
+```bash
+docker build -t ghcr.io/aglucaci/evonexus:0.1.0 . && docker push ghcr.io/aglucaci/evonexus:0.1.0
+```
+
+### What `raw_reads` does and does not do
+
+`--acquisition_mode raw_reads` retrieves FASTQ from SRA with per-run
+checksums, and **nothing downstream consumes it**. EvoNexus has no
+read-mapping, assembly or detection-reconstruction stage: assessability and
+the library × lineage response both come from the published deposit's own
+screening metadata. A `raw_reads` run therefore produces the same results as
+`processed_only` after a far larger download, so the pipeline refuses the mode
+unless you pass `--allow_unused_read_download true` to stage the files for
+your own use.
 
 ---
 

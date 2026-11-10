@@ -96,7 +96,11 @@ attach the posterior `.npz` files as release assets.
 - **BLAS threading** can reorder floating-point reductions. Set
   `OMP_NUM_THREADS=1` for bit-level reproducibility at some cost in speed.
 - **External phylogenetic tools** (IQ-TREE, HyPhy) have their own seeds and
-  heuristics; pin their versions through the containers.
+  heuristics; pin their versions through a container built from the
+  repository `Dockerfile`, or through the conda environment. No prebuilt
+  image is published, so a run that does not build one is pinned only by
+  whatever `environment.yml` resolved to on that day — the run record
+  states the resolved versions.
 - **Parquet versus CSV.** Without `pyarrow`, tables are written as `.csv.gz`.
   Values round-trip, but dtypes may differ subtly. Install `pyarrow` for
   published runs; the run record states which format was used.

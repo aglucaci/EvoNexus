@@ -143,6 +143,27 @@ jobs:
       - name: Help text
         run: nextflow run . --help
 
+      - name: Assert profiles are not overridden by the baseline config
+        run: |
+          # conf/base.config must be included BEFORE the profiles block.
+          # Including it after made every profile inherit the local executor
+          # and the small resource labels, so -profile full silently ran the
+          # whole analysis on the submit node instead of SLURM.
+          nextflow config -profile full > /tmp/full.config
+          grep -q "executor = 'slurm'" /tmp/full.config
+          grep -A2 "withLabel:heavy" /tmp/full.config | grep -q 'cpus = 16'
+          nextflow config -profile test | grep -q "executor = 'local'"
+          echo 'profile resolution is correct'
+
+      - name: Assert raw_reads is refused rather than silently useless
+        run: |
+          # DOWNLOAD_READS has no consumer; the mode must fail loudly.
+          if nextflow run . -profile test --acquisition_mode raw_reads > /tmp/rr.log 2>&1; then
+            echo 'raw_reads should have failed but did not'; cat /tmp/rr.log; exit 1
+          fi
+          grep -q 'not supported for analysis' /tmp/rr.log
+          echo 'raw_reads is refused'
+
       - name: Run the synthetic profile through the real DAG
         env:
           MPLBACKEND: Agg

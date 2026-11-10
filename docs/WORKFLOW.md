@@ -92,7 +92,7 @@ Nextflow release supports — use a current Nextflow, or an older JDK.
 | Process | Module | Label | Does |
 | --- | --- | --- | --- |
 | `ACQUIRE_DATA` | acquisition | network | Manifest, raw download, inventory |
-| `DOWNLOAD_READS` | acquisition | network | SRA FASTQ (`raw_reads` only) |
+| `DOWNLOAD_READS` | acquisition | network | SRA FASTQ (`raw_reads` only; output unused — see below) |
 | `HARMONIZE_METADATA` | metadata | light | Canonical tables + crosswalk |
 | `RUN_QC_GATES` | metadata | light | G1–G7, QC report, waterfall |
 | `CREATE_MATRIX` | viromics | light | Analysis frame per resolution |
@@ -111,7 +111,9 @@ See [`params.yaml`](../params.yaml) for a commented template and
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
-| `acquisition_mode` | `processed_only` | `processed_only` or `raw_reads` |
+| `acquisition_mode` | `processed_only` | `raw_reads` downloads unused FASTQ and is refused by default |
+| `allow_unused_read_download` | `false` | Permit `raw_reads` anyway, to cache FASTQ for your own use |
+| `container` | `null` | Image for `-profile docker/singularity`; none is published |
 | `require_mapping_approval` | `true` | Harmonization stops until a human approves the mapping |
 | `fail_on_critical_gate` | `false` | Skip the primary model vs. abort the run |
 | `models` | `[M0..M4]` | Ladder members to fit |
@@ -156,3 +158,18 @@ python -m evonexus.cli report       --results-dir results/x
 labels; each profile overrides them. On SLURM, set `EVONEXUS_QUEUE` and
 `EVONEXUS_CLUSTER_OPTS`. Network processes are rate-limited (`maxForks`) to
 stay inside NCBI's unauthenticated limits.
+
+## A stage that does not exist
+
+`DOWNLOAD_READS` is the only process whose output feeds nothing. It retrieves
+SRA FASTQ into `${params.datadir}/raw/sra/`, and the DAG stops there: no
+process maps, assembles or thresholds those reads. The library × lineage
+response, and the distinction between an assay-tested negative and an
+`unassessable` cell that gate G3 checks, both come from the published
+deposit's screening metadata rather than from reads EvoNexus processed itself.
+
+Reconstructing detections independently would mean adding a reference-panel
+build, a mapping step, and explicit depth and coverage-breadth thresholds —
+and then rewriting G3 against those thresholds instead of against the
+deposit's metadata. Until that exists, `raw_reads` is a download mode, not an
+analysis mode, and the pipeline says so rather than implying otherwise.
