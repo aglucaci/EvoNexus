@@ -35,21 +35,67 @@ jobs:
           pip install -r requirements-ci.txt
 
       - name: Lint
-        run: ruff check scripts tests
+        run: ruff check scripts tests packages
 
       - name: Run tests
         env:
-          PYTHONPATH: scripts
+          PYTHONPATH: scripts:packages/evonexus-bayes/src
           MPLBACKEND: Agg
           OMP_NUM_THREADS: '1'
-        run: pytest tests -q --cov=scripts/evonexus --cov-report=term-missing
+        run: pytest tests -q --cov=scripts/evonexus --cov=packages/evonexus-bayes/src/evonexus_bayes --cov-report=term-missing
 
       - name: Data dictionary is up to date
         env:
-          PYTHONPATH: scripts
+          PYTHONPATH: scripts:packages/evonexus-bayes/src
         run: |
           python -m evonexus.cli schema --markdown /tmp/DATA_DICTIONARY.md
           diff -u docs/DATA_DICTIONARY.md /tmp/DATA_DICTIONARY.md
+
+  package:
+    # The only job that proves the extraction holds. Every other job puts
+    # both `scripts/` and the package source on PYTHONPATH, so a stray
+    # `from evonexus...` left inside evonexus_bayes would pass them all
+    # silently. Here the repository is deliberately not importable.
+    name: evonexus-bayes stands alone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install the package on its own
+        run: |
+          python -m pip install --upgrade pip
+          pip install ./packages/evonexus-bayes pytest
+
+      - name: Import every module with the repository off sys.path
+        working-directory: /tmp
+        run: |
+          python - <<'PY'
+          import importlib
+          import sys
+
+          for name in (
+              "checks", "contrast", "design", "diagnostics",
+              "fallback", "fit", "model", "predict",
+          ):
+              importlib.import_module(f"evonexus_bayes.{name}")
+
+          leaked = sorted({m.split(".")[0] for m in sys.modules} & {"evonexus"})
+          assert not leaked, f"package pulled in the pipeline: {leaked}"
+
+          import evonexus_bayes
+          print("evonexus_bayes", evonexus_bayes.__version__)
+          PY
+
+      - name: Run the package test suite
+        working-directory: packages/evonexus-bayes
+        env:
+          MPLBACKEND: Agg
+          OMP_NUM_THREADS: '1'
+        run: pytest
 
   integration:
     name: Deterministic synthetic pipeline
@@ -70,7 +116,7 @@ jobs:
 
       - name: Run the synthetic pipeline end to end
         env:
-          PYTHONPATH: scripts
+          PYTHONPATH: scripts:packages/evonexus-bayes/src
           MPLBACKEND: Agg
           OMP_NUM_THREADS: '1'
         run: bash bin/run_synthetic_pipeline.sh results/ci
@@ -196,3 +242,68 @@ jobs:
           name: nextflow-log-${{ matrix.nextflow }}
           path: .nextflow.log
           retention-days: 7
+
+  container:
+    name: Container image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: nf-core/setup-nextflow@v2
+        with:
+          version: latest-stable
+
+      - name: Build the image
+        run: docker build -t evonexus:ci .
+
+      - name: Assert the toolchain is present and on PATH in a login shell
+        run: |
+          # /etc/profile resets PATH and loses the conda prefix, so a login
+          # shell is the case that actually breaks; Singularity uses one.
+          docker run --rm evonexus:ci bash -lc '
+            set -e
+            python -c "import numpy, pandas, scipy, pyarrow, matplotlib, pymc, arviz, Bio"
+            for t in mafft hyphy ps; do command -v $t >/dev/null || { echo "missing $t"; exit 1; }; done
+            # Bioconda names IQ-TREE 2 either way; one of them must exist.
+            command -v iqtree2 >/dev/null || command -v iqtree >/dev/null
+          '
+
+      - name: Run the synthetic profile inside the container
+        env:
+          MPLBACKEND: Agg
+          OMP_NUM_THREADS: '1'
+        run: nextflow run . -profile test,docker --container evonexus:ci
+
+      - name: Assert the containerized run published the same tree
+        run: |
+          python - <<'PY'
+          import pathlib
+          root = pathlib.Path('results/test')
+          expected = {'acquisition', 'processed', 'qc', 'matrix', 'bayesian',
+                      'connectivity', 'validation', 'evolution', 'figures',
+                      'tables', 'manuscript', 'figure_legends', 'docs'}
+          missing = expected - {p.name for p in root.iterdir() if p.is_dir()}
+          assert not missing, f'missing output directories: {sorted(missing)}'
+          print('containerized run published the expected tree')
+          PY
+
+      - name: Assert an installed IQ-TREE is not reported missing
+        run: |
+          # The image ships `iqtree`, not `iqtree2`. Probing only the suffixed
+          # name made a complete toolchain report itself as incomplete, and
+          # emitted an exclusion warning for analyses that had in fact run.
+          # The test profile supplies no sequences, so the evolution stage is
+          # `not_run` and carries no tool list -- ask the resolver directly,
+          # inside the image, where the binary name actually differs.
+          docker run --rm -v "$PWD":/w -w /w -e PYTHONPATH=scripts:packages/evonexus-bayes/src evonexus:ci \
+            python -c '
+          from evonexus.evolution.pipeline import missing_external_tools
+          missing = missing_external_tools()
+          assert missing == [], f"image is missing tools: {missing}"
+          print("toolchain resolves inside the image")
+          '

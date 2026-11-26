@@ -15,12 +15,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from evonexus.bayesian.design import build_design
-from evonexus.bayesian.fit import fit_model
-from evonexus.bayesian.predict import PosteriorPredictor, expit
 from evonexus.core.config import load_config, resolve_variant
 from evonexus.core.io import read_table, write_json, write_table
 from evonexus.core.provenance import RunRecord
+from evonexus_bayes.design import build_design
+from evonexus_bayes.fit import fit_model
+from evonexus_bayes.predict import PosteriorPredictor, expit
 
 
 def scoring_rules(y: np.ndarray, p_draws: np.ndarray) -> dict[str, float]:
@@ -257,7 +257,7 @@ def run_validation(
     # In-sample calibration of the fitted primary model, for comparison.
     insample = None
     if posterior_dir:
-        from evonexus.bayesian.fit import load_posterior
+        from evonexus_bayes.fit import load_posterior
 
         try:
             posterior = load_posterior(posterior_dir, model)

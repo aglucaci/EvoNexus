@@ -75,9 +75,9 @@ def test_gates_never_raise_on_empty_tables():
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="module")
 def posterior(analysis_frame):
-    from evonexus.bayesian.design import build_design
-    from evonexus.bayesian.fit import fit_model
     from evonexus.core.config import resolve_variant
+    from evonexus_bayes.design import build_design
+    from evonexus_bayes.fit import fit_model
 
     frame = analysis_frame["frame"]
     terms = load_config("model_comparisons")["models"]["M3"]["terms"]

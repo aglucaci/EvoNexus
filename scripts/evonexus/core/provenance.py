@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import platform
 import subprocess
 import sys
@@ -14,7 +15,14 @@ from typing import Any
 
 from evonexus.core.io import sha256_file, write_json
 
+REPO_DIR_ENV = "EVONEXUS_REPO_DIR"
+_DEFAULT_REPO_DIR = Path(__file__).resolve().parents[3]
+
 _TRACKED_PACKAGES = (
+    # The modelling package ships separately from the pipeline, so its
+    # version is the scientifically load-bearing one for any posterior:
+    # the sampler no longer moves with the repository's own version.
+    "evonexus_bayes",
     "numpy",
     "pandas",
     "scipy",
@@ -40,7 +48,7 @@ def _git(*args: str) -> str | None:
             capture_output=True,
             text=True,
             timeout=15,
-            cwd=Path(__file__).resolve().parents[3],
+            cwd=Path(os.environ.get(REPO_DIR_ENV, _DEFAULT_REPO_DIR)),
         )
     except Exception:
         return None

@@ -23,8 +23,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from evonexus.bayesian.diagnostics import hdi
-from evonexus.bayesian.predict import PosteriorPredictor, expit
+from evonexus_bayes.diagnostics import hdi
+from evonexus_bayes.predict import PosteriorPredictor, expit
 
 ESTIMAND_CAVEAT = (
     "Observational association standardized to a common sampling distribution. "

@@ -7,20 +7,20 @@ from typing import Any
 
 import pandas as pd
 
-from evonexus.bayesian.checks import parameter_recovery, prior_predictive_check
-from evonexus.bayesian.contrast import (
+from evonexus.core.config import load_config, resolve_variant
+from evonexus.core.io import read_json, read_table, write_json, write_table
+from evonexus.core.provenance import RunRecord
+from evonexus.quantify.matrix import apply_restriction
+from evonexus_bayes.checks import parameter_recovery, prior_predictive_check
+from evonexus_bayes.contrast import (
     ESTIMAND_CAVEAT,
     habitat_contrast,
     posterior_predictive_replicates,
     raw_detection_rates,
 )
-from evonexus.bayesian.design import build_design
-from evonexus.bayesian.diagnostics import compare_models, convergence_report, psis_loo
-from evonexus.bayesian.fit import fit_model, resolve_engine, save_posterior
-from evonexus.core.config import load_config, resolve_variant
-from evonexus.core.io import read_json, read_table, write_json, write_table
-from evonexus.core.provenance import RunRecord
-from evonexus.quantify.matrix import apply_restriction
+from evonexus_bayes.design import build_design
+from evonexus_bayes.diagnostics import compare_models, convergence_report, psis_loo
+from evonexus_bayes.fit import fit_model, resolve_engine, save_posterior
 
 
 def _host_covariance(path: str | Path | None) -> dict[str, Any] | None:

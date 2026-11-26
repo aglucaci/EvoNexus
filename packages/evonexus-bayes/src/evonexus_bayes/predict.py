@@ -3,7 +3,7 @@
 Everything downstream — habitat standardization, connectivity, calibration,
 held-out scoring — goes through :class:`PosteriorPredictor`. It reads the flat
 coefficient array plus the block/level metadata written by
-``evonexus.bayesian.fit.save_posterior``, so a result can be re-derived from
+``evonexus_bayes.fit.save_posterior``, so a result can be re-derived from
 files alone without re-fitting and without knowing which sampler produced them.
 
 Unseen levels (a new sampling site, a new sequencing batch) are *integrated

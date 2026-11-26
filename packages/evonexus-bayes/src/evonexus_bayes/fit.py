@@ -7,10 +7,10 @@ from typing import Any
 
 import numpy as np
 
-from evonexus.bayesian import fallback as fallback_engine
-from evonexus.bayesian import model as pymc_engine
-from evonexus.bayesian.design import ModelDesign
-from evonexus.core.io import read_json, write_json
+from evonexus_bayes import fallback as fallback_engine
+from evonexus_bayes import model as pymc_engine
+from evonexus_bayes._json import read_json, write_json
+from evonexus_bayes.design import ModelDesign
 
 
 def available_engines() -> list[str]:

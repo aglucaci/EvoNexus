@@ -38,4 +38,13 @@ ENV PATH=/opt/conda/bin:$PATH \
     PYTHONNOUSERSITE=1 \
     MPLBACKEND=Agg
 
+# A login shell sources /etc/profile, which resets PATH and loses the conda
+# prefix -- `bash -lc python` then fails even though ENV PATH is correct.
+# Nextflow runs task scripts with a non-login shell, but Singularity and
+# interactive `docker run -it` do not, so the PATH is pinned here as well.
+USER root
+RUN printf 'export PATH=/opt/conda/bin:$PATH\n' > /etc/profile.d/00-conda.sh \
+ && chmod 0644 /etc/profile.d/00-conda.sh
+USER $MAMBA_USER
+
 SHELL ["/bin/bash", "-c"]

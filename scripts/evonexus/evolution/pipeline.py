@@ -78,6 +78,20 @@ def _selection_eligible(quality: dict[str, Any], cfg: dict[str, Any],
     return (not reasons), reasons
 
 
+def missing_external_tools() -> list[str]:
+    """External tools the evolutionary analyses need but cannot find.
+
+    IQ-TREE 2 is installed as `iqtree` by some bioconda builds and `iqtree2`
+    by others, so it is resolved rather than probed by one name. Reporting a
+    present tool as missing is as dishonest as silently substituting an
+    approximation for an absent one.
+    """
+    missing = {t for t in ("mafft", "hyphy") if not tools.tool_available(t)}
+    if tools.resolve_iqtree() is None:
+        missing.add("iqtree2")
+    return sorted(missing)
+
+
 def run_evolution(
     processed_dir: str | Path,
     sequences_path: str | Path | None,
@@ -266,9 +280,7 @@ def run_evolution(
         except Exception as exc:
             integration = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
 
-    missing_tools = sorted({
-        t for t in ("mafft", "iqtree2", "hyphy") if not tools.tool_available(t)
-    })
+    missing_tools = missing_external_tools()
     payload = {
         "status": "ok" if not results_df.empty else "no_lineages",
         "n_lineages_attempted": len(results_df),

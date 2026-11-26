@@ -1,17 +1,8 @@
-"""Bayesian hierarchical modelling of library-level viral RNA detection."""
+"""Pipeline-side driver for the Bayesian modelling stage.
 
-from evonexus.bayesian.contrast import habitat_contrast, standardized_predictions
-from evonexus.bayesian.design import ModelDesign, build_design
-from evonexus.bayesian.diagnostics import convergence_report, summarize_posterior
-from evonexus.bayesian.fit import available_engines, fit_model
-
-__all__ = [
-    "ModelDesign",
-    "build_design",
-    "fit_model",
-    "available_engines",
-    "summarize_posterior",
-    "convergence_report",
-    "habitat_contrast",
-    "standardized_predictions",
-]
+The model itself lives in the standalone ``evonexus_bayes`` distribution
+(``packages/evonexus-bayes``). What remains here is the part that is specific
+to this repository rather than to the statistics: resolving ``config/``, the
+``RunRecord`` manifest, the sensitivity grid, and the layout of the output
+directory that ``evonexus.reporting`` reads back.
+"""

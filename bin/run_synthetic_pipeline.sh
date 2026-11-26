@@ -17,7 +17,7 @@ TUNE="${EVONEXUS_TUNE:-300}"
 CHAINS="${EVONEXUS_CHAINS:-2}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export PYTHONPATH="${ROOT}/scripts${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${ROOT}/scripts:${ROOT}/packages/evonexus-bayes/src${PYTHONPATH:+:${PYTHONPATH}}"
 export EVONEXUS_CONFIG_DIR="${ROOT}/config"
 export MPLBACKEND=Agg
 

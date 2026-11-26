@@ -16,7 +16,13 @@ _DEFAULT_CONFIG_DIR = Path(__file__).resolve().parents[3] / "config"
 
 def config_dir() -> Path:
     """Directory holding the YAML configuration files."""
-    return Path(os.environ.get(CONFIG_DIR_ENV, _DEFAULT_CONFIG_DIR))
+    resolved = Path(os.environ.get(CONFIG_DIR_ENV, _DEFAULT_CONFIG_DIR))
+    if not resolved.is_dir():
+        raise FileNotFoundError(
+            f"configuration directory not found: {resolved}. "
+            f"Set {CONFIG_DIR_ENV} to the repository's `config/` directory."
+        )
+    return resolved
 
 
 def load_yaml(path: str | Path) -> dict[str, Any]:

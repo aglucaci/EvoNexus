@@ -5,7 +5,7 @@ Why this exists
 PyMC/NUTS is the intended engine for published results. But a reproducibility
 pipeline that cannot run at all without a heavy dependency is not much use on
 a laptop or in CI, so EvoNexus ships a second engine for the *same*
-:class:`~evonexus.bayesian.design.ModelDesign`.
+:class:`~evonexus_bayes.design.ModelDesign`.
 
 Method
 ------
@@ -34,7 +34,7 @@ from typing import Any
 
 import numpy as np
 
-from evonexus.bayesian.design import ModelDesign, design_matrix
+from evonexus_bayes.design import ModelDesign, design_matrix
 
 ENGINE = "polya_gamma_gibbs"
 _PG_TRUNCATION = 200
