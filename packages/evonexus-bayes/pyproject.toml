@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "evonexus-bayes"
+version = "0.1.0"
+description = "Hierarchical Bayesian modelling of library-level viral RNA detection"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Alexander Lucaci" }]
+keywords = [
+    "bayesian",
+    "hierarchical-model",
+    "detection-probability",
+    "metatranscriptomics",
+    "viral-ecology",
+]
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "scipy>=1.11",
+]
+
+# PyMC/NUTS is the intended engine for published results, but the package
+# ships a self-contained Polya-Gamma Gibbs sampler so that a bare install
+# still fits every model. `model.py` and `diagnostics.py` import these
+# lazily, inside the functions that need them.
+[project.optional-dependencies]
+pymc = [
+    "pymc>=5.10",
+    "arviz>=0.17",
+    "pytensor>=2.18",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/evonexus_bayes"]
+
+# Its own pytest config, deliberately. Without a config file here, pytest
+# searches upward, finds the repository's `pytest.ini`, and puts `scripts/`
+# back on sys.path — which is exactly the isolation this suite exists to
+# check. Note there is no `pythonpath` entry: the package is imported as an
+# installed distribution, not from the source tree.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"

@@ -6,6 +6,33 @@ All notable changes to EvoNexus are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+- `evonexus-bayes`, a standalone distribution under `packages/` holding the
+  hierarchical detection model, both samplers, and the prediction, contrast
+  and diagnostic machinery. It depends only on numpy, pandas and scipy, with
+  PyMC/ArviZ as an optional `[pymc]` extra, and is versioned independently of
+  the pipeline starting at 0.1.0 — a posterior is now pinned by the modelling
+  package's version, recorded in every run manifest, rather than by the
+  repository's.
+- A CI job that installs the package into a clean environment with the
+  repository off `sys.path` and imports every module. It is the only job that
+  can detect a dependency leaking back into the package, since every other job
+  puts both source trees on `PYTHONPATH`.
+- `EVONEXUS_REPO_DIR`, so `git` provenance is read from the repository rather
+  than from the package's own location on disk.
+
+### Changed
+- The Bayesian stage driver (`evonexus.bayesian.run`) stays in the pipeline:
+  it resolves `config/`, writes the `RunRecord` manifest, owns the sensitivity
+  grid, and owns the output-directory layout that `evonexus.reporting` reads
+  back. None of that is portable, and the three in-repo consumers of the model
+  never imported it. The import path for the model itself moved from
+  `evonexus.bayesian.*` to `evonexus_bayes.*`; `python -m evonexus.cli` and
+  every Nextflow process are unchanged.
+- `config_dir()` now fails with a message naming `EVONEXUS_CONFIG_DIR` instead
+  of letting a missing directory surface as a confusing `FileNotFoundError` on
+  a derived path.
+
 ### Fixed
 - Nextflow strict syntax (25.10+). The pipeline failed to compile on current
   releases: `include` inside a workflow body, `return` in a workflow, and

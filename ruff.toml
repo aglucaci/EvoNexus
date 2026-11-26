@@ -40,8 +40,9 @@ ignore = [
 [lint.per-file-ignores]
 # Package exports are grouped by subject rather than sorted alphabetically.
 "scripts/evonexus/**/__init__.py" = ["RUF022"]
+"packages/evonexus-bayes/src/evonexus_bayes/__init__.py" = ["RUF022"]
 # Tests assert on values that read better as literals.
 "tests/*.py" = ["RUF015"]
 
 [lint.isort]
-known-first-party = ["evonexus"]
+known-first-party = ["evonexus", "evonexus_bayes"]

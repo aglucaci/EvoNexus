@@ -32,9 +32,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from evonexus.bayesian.predict import PosteriorPredictor, expit
 from evonexus.core.io import read_json, read_table, write_json, write_table
 from evonexus.core.provenance import RunRecord
+from evonexus_bayes.predict import PosteriorPredictor, expit
 
 CONNECTIVITY_CAVEAT = (
     "Expected co-detection under the fitted model for a common sampling design. "
@@ -123,7 +123,7 @@ def connectivity_matrix(p: np.ndarray) -> np.ndarray:
 
 def summarize_connectivity(C: np.ndarray, hosts: list[str], habitat: str,
                            hdi_prob: float = 0.95) -> pd.DataFrame:
-    from evonexus.bayesian.diagnostics import hdi
+    from evonexus_bayes.diagnostics import hdi
 
     rows: list[dict[str, Any]] = []
     n = len(hosts)
@@ -287,7 +287,7 @@ def connectivity_vs_phylogeny(
     if not slopes:
         return {"status": "unavailable", "reason": "no variation in distance or connectivity"}
 
-    from evonexus.bayesian.diagnostics import hdi
+    from evonexus_bayes.diagnostics import hdi
 
     lo, hi = hdi(np.asarray(slopes))
     return {
@@ -321,7 +321,7 @@ def run_connectivity(
     host_distance_path: str | Path | None = None,
     synthetic: bool = False,
 ) -> dict[str, Any]:
-    from evonexus.bayesian.fit import load_posterior
+    from evonexus_bayes.fit import load_posterior
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)

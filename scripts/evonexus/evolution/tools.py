@@ -19,6 +19,18 @@ def tool_available(name: str) -> bool:
     return shutil.which(name) is not None
 
 
+# Bioconda ships IQ-TREE 2 as `iqtree` in some builds and `iqtree2` in others,
+# so the binary name is resolved rather than assumed. Checking only `iqtree2`
+# made a working install look like a missing tool and emit an exclusion
+# warning for analyses that had in fact run.
+IQTREE_BINARIES = ("iqtree2", "iqtree")
+
+
+def resolve_iqtree() -> str | None:
+    """Name of the usable IQ-TREE binary, or None if neither is installed."""
+    return next((b for b in IQTREE_BINARIES if tool_available(b)), None)
+
+
 def _run(cmd: Sequence[str], cwd: str | Path | None = None,
          timeout: int = 7200) -> dict[str, Any]:
     try:
@@ -61,7 +73,7 @@ def run_mafft(input_fasta: str | Path, output_fasta: str | Path,
 
 def run_iqtree(alignment: str | Path, prefix: str | Path, model: str = "MFP",
                bootstrap: int = 1000, extra: Sequence[str] = ()) -> dict[str, Any]:
-    binary = "iqtree2" if tool_available("iqtree2") else ("iqtree" if tool_available("iqtree") else None)
+    binary = resolve_iqtree()
     if binary is None:
         return {"status": "tool_missing", "tool": "iqtree2",
                 "remedy": "conda install -c bioconda iqtree"}

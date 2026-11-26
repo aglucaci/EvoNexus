@@ -26,7 +26,7 @@ from typing import Any
 
 import numpy as np
 
-from evonexus.bayesian.design import ModelDesign, design_matrix
+from evonexus_bayes.design import ModelDesign, design_matrix
 
 ENGINE = "pymc_nuts"
 

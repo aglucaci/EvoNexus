@@ -171,8 +171,8 @@ def cmd_schema(args: argparse.Namespace) -> int:
 
 
 def cmd_engines(args: argparse.Namespace) -> int:
-    from evonexus.bayesian.fit import available_engines
     from evonexus.core.provenance import record_environment
+    from evonexus_bayes.fit import available_engines
 
     _print({"engines": available_engines(), "environment": record_environment()})
     return 0

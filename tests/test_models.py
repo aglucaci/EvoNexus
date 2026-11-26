@@ -3,26 +3,47 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
 
-from evonexus.bayesian.checks import prior_predictive_check
-from evonexus.bayesian.contrast import habitat_contrast, standardized_predictions
-from evonexus.bayesian.design import build_design, design_matrix
-from evonexus.bayesian.diagnostics import (
-    compare_models,
-    convergence_report,
-    ess,
-    hdi,
-    psis_loo,
-    rhat,
-)
-from evonexus.bayesian.fit import fit_model
-from evonexus.bayesian.predict import PosteriorPredictor, expit
 from evonexus.core.config import load_config, resolve_variant
 from evonexus.quantify.matrix import apply_restriction
+from evonexus_bayes.checks import prior_predictive_check
+from evonexus_bayes.contrast import habitat_contrast, standardized_predictions
+from evonexus_bayes.design import build_design, design_matrix
+from evonexus_bayes.diagnostics import (
+    compare_models,
+    convergence_report,
+    psis_loo,
+)
+from evonexus_bayes.fit import fit_model
+from evonexus_bayes.predict import PosteriorPredictor
 
 SAMPLER = {"draws": 120, "tune": 120, "chains": 2, "seed": 11}
+
+
+def test_vendored_json_matches_core_io(tmp_path):
+    """`evonexus_bayes` carries its own copy of the JSON writer.
+
+    The package must not depend on `evonexus.core.io`, so the two
+    implementations are separate code. This pins them together: if either side
+    changes its encoding, posterior artifacts stop matching everything else the
+    pipeline writes, and this fails.
+    """
+    from evonexus.core.io import write_json as core_write_json
+    from evonexus_bayes._json import write_json as pkg_write_json
+
+    payload = {
+        "scale": np.float64(1.5),
+        "draws": [np.int64(3), np.int64(4)],
+        "array": np.arange(3),
+        "diverged": float("nan"),
+        "bound": float("-inf"),
+        "engine": "polya_gamma_gibbs",
+        "names": {"b", "a"},
+    }
+    core = core_write_json(payload, tmp_path / "core.json").read_text()
+    pkg = pkg_write_json(payload, tmp_path / "pkg.json").read_text()
+    assert core == pkg
 
 
 @pytest.fixture(scope="module")
@@ -164,24 +185,6 @@ def test_diagnostics_report_runs(fitted):
     assert len(report["summary"]) == posterior["beta"].shape[-1] + posterior["sigma"].shape[-1]
 
 
-def test_rhat_and_ess_behave_on_known_input():
-    rng = np.random.default_rng(0)
-    independent = rng.standard_normal((4, 500))
-    assert rhat(independent) < 1.05
-    assert ess(independent) > 400
-    # Chains stuck at different values must be flagged.
-    stuck = np.stack([np.full(500, -3.0), np.full(500, 3.0)])
-    assert rhat(stuck) > 1.5 or np.isnan(rhat(stuck))
-
-
-def test_hdi_covers_the_bulk():
-    rng = np.random.default_rng(1)
-    draws = rng.normal(2.0, 1.0, 20000)
-    low, high = hdi(draws, 0.95)
-    assert low < 2.0 < high
-    assert 3.5 < (high - low) < 4.5
-
-
 # ---------------------------------------------------------------------------
 # prediction and the estimand
 # ---------------------------------------------------------------------------
@@ -242,44 +245,3 @@ def test_loo_and_comparison(frame, priors):
     table = compare_models(loos)
     assert list(table["rank"]) == [1, 2]
     assert table.iloc[0]["elpd_diff"] == 0.0
-
-
-# ---------------------------------------------------------------------------
-# parameter recovery on a known generating process
-# ---------------------------------------------------------------------------
-def test_recovers_a_known_logistic_coefficient():
-    """End-to-end check that the sampler is not biased on a simple case."""
-    rng = np.random.default_rng(5)
-    n = 4000
-    x = rng.standard_normal(n)
-    group = rng.integers(0, 6, n)
-    offsets = rng.normal(0, 0.5, 6)
-    eta = -1.0 + 1.25 * x + offsets[group]
-    y = (rng.random(n) < expit(eta)).astype(float)
-
-    frame = pd.DataFrame(
-        {
-            "y": y,
-            "U": x,                      # reuse the habitat slot as the known covariate
-            "virus_unit": "V",
-            "virus_family": "F",
-            "host_species": "H",
-            "tissue_group": "T",
-            "site_id": [f"S{g}" for g in group],
-            "sequencing_batch": "B",
-            "log_depth_z": 0.0,
-            "log_pool_size_z": 0.0,
-            "time_z": 0.0,
-        }
-    )
-    design = build_design(frame, ["intercept", "habitat", "site"], model_name="known")
-    posterior = fit_model(design, {"intercept": {"dist": "normal", "mu": 0, "sigma": 2},
-                                   "habitat_beta": {"dist": "normal", "mu": 0, "sigma": 2},
-                                   "site_sd": {"dist": "halfnormal", "sigma": 1}},
-                          sampler={"draws": 400, "tune": 400, "chains": 2, "seed": 9},
-                          engine="polya_gamma_gibbs")
-    predictor = PosteriorPredictor(posterior)
-    beta = predictor.fixed("habitat")
-    low, high = hdi(beta, 0.95)
-    assert low <= 1.25 <= high, f"true 1.25 outside HDI [{low:.3f}, {high:.3f}]"
-    assert abs(float(np.mean(beta)) - 1.25) < 0.25

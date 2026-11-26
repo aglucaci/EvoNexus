@@ -8,10 +8,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from evonexus.bayesian.design import ModelDesign, design_matrix
-from evonexus.bayesian.diagnostics import hdi
-from evonexus.bayesian.predict import expit
-from evonexus.core.io import read_json
+from evonexus_bayes._json import read_json
+from evonexus_bayes.design import ModelDesign, design_matrix
+from evonexus_bayes.diagnostics import hdi
+from evonexus_bayes.predict import expit
 
 
 def _draw_prior(rng: np.random.Generator, spec: dict[str, Any], size: int = 1) -> np.ndarray:
@@ -124,7 +124,7 @@ def parameter_recovery(
     Only meaningful for synthetic data. The result is explicitly marked as
     synthetic so it can never be read as an empirical finding.
     """
-    from evonexus.bayesian.predict import PosteriorPredictor
+    from evonexus_bayes.predict import PosteriorPredictor
 
     path = Path(truth_path)
     if not path.exists():
